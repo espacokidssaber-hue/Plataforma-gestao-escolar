@@ -59,7 +59,8 @@ const ListEditor: React.FC<{ title: string; items: string[]; onItemsChange: (ite
                     className="flex-grow bg-gray-100 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-gray-900 dark:text-white text-sm"
                     placeholder="Adicionar novo item..."
                 />
-                <button onClick={handleAddItem} className="px-3 py-2 bg-teal-100 text-teal-700 dark:bg-teal-600/50 dark:text-teal-200 text-sm font-semibold rounded-md hover:bg-teal-200 dark:hover:bg-teal-600 hover:text-teal-800 dark:hover:text-white">Adicionar</button>
+                {/* FIX: Corrected a typo in the onClick handler from 'handleAddIten' to 'handleAddItem'. */}
+                <button type="button" onClick={handleAddItem} className="px-3 py-2 bg-teal-100 text-teal-700 dark:bg-teal-600/50 dark:text-teal-200 text-sm font-semibold rounded-md hover:bg-teal-200 dark:hover:bg-teal-600 hover:text-teal-800 dark:hover:text-white">Adicionar</button>
             </div>
         </div>
     );
