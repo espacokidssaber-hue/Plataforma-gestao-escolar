@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plataforma de Gestão Escolar</title>
+    <script>
+      // Prevents FOUC (Flash of Unstyled Content) by applying the theme before React mounts
+      (function() {
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0",
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+          "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
+          "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs"
+        }
+      }
+    </script>
+    <style>
+      /* Increase base font size */
+      html {
+        font-size: 17px; /* Default is 16px */
+      }
+
+      /* Global focus styles for a better typing experience */
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        --tw-ring-color: rgb(20 184 166); /* teal-500 */
+        box-shadow: 0 0 0 2px var(--tw-ring-color);
+        border-color: rgb(20 184 166) !important;
+        transition: box-shadow 0.1s ease-in-out, border-color 0.1s ease-in-out;
+      }
+      .dark input:focus,
+      .dark textarea:focus,
+      .dark select:focus {
+        --tw-ring-color: rgb(45 212 191); /* teal-400 */
+        border-color: rgb(45 212 191) !important;
+      }
+
+
+      /* Simple scrollbar styling for a modern look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9; /* bg-slate-100 */
+      }
+      .dark ::-webkit-scrollbar-track {
+        background: #1a202c; /* Equivalent to dark:bg-gray-900 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #94a3b8; /* bg-slate-400 */
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #4a5568; /* dark:bg-gray-600 */
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b; /* bg-slate-500 */
+      }
+       .dark ::-webkit-scrollbar-thumb:hover {
+        background: #718096; /* dark:bg-gray-500 */
+      }
+
+      /* Print-specific styles */
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .print-container, .print-container * {
+          visibility: visible;
+        }
+        .print-container {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-avoid-break {
+          page-break-inside: avoid !important;
+        }
+        .printable-diary tbody tr {
+          page-break-inside: avoid !important;
+        }
+        
+        .printable-declaration {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt; /* Reduced from 12pt */
+            color: #000;
+            line-height: 1.5; /* Added for readability */
+        }
+
+        .printable-transcript {
+            font-family: Arial, sans-serif;
+            font-size: 6.5pt; /* Further reduced from 7pt */
+            color: #000;
+        }
+        .printable-transcript table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .printable-transcript th, 
+        .printable-transcript td {
+            border: 1px solid #000;
+            padding: 0.5px 1px; /* Further reduced from 1px */
+            text-align: center;
+            vertical-align: middle;
+        }
+        .printable-transcript .header-info {
+            font-size: 6pt; /* Reduced from 6.5pt */
+        }
+        .printable-transcript .section-title {
+            background-color: #dbeafe !important; /* light blue */
+            font-weight: bold;
+            text-align: center;
+            font-size: 7.5pt; /* Reduced from 8.5pt */
+        }
+         .printable-transcript .section-title td {
+            border: 1px solid #000;
+         }
+        .printable-transcript .no-border-left { border-left: none; }
+        .printable-transcript .no-border-right { border-right: none; }
+        .printable-transcript .no-border-top { border-top: none; }
+        .printable-transcript .no-border-bottom { border-bottom: none; }
+        .printable-transcript .text-left { text-align: left; }
+        .printable-transcript .font-bold { font-weight: bold; }
+        
+        .printable-diary {
+            font-family: Arial, sans-serif;
+            font-size: 8pt; /* Reduced from 9pt */
+            color: #000;
+        }
+        .printable-diary .diary-page {
+            page-break-after: always;
+            padding-bottom: 10mm;
+            padding-left: 10mm;
+            padding-right: 10mm;
+            padding-top: 0;
+            height: auto; /* Allow content to define height */
+            display: flex;
+            flex-direction: column;
+        }
+        .printable-diary.print-landscape .diary-page {
+            height: 190mm; /* A4 landscape height minus margins */
+        }
+        .printable-diary.print-portrait .diary-page {
+             height: 277mm; /* A4 portrait height minus margins */
+        }
+        .printable-diary .diary-page:last-child {
+            page-break-after: auto;
+        }
+        .printable-diary .page-header {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+        }
+        .printable-diary .page-footer {
+            text-align: center;
+            font-size: 7pt; /* Reduced from 8pt */
+            margin-top: auto;
+            border-top: 1px solid #333;
+            padding-top: 4px;
+        }
+        .printable-diary .lined-paper {
+            background-image: repeating-linear-gradient(to bottom, transparent, transparent 15px, #d1d5db 15px, #d1d5db 16px);
+            background-size: 100% 16px;
+            background-position-y: 4px;
+        }
+        .printable-diary .non-school-day {
+            background-color: #e5e7eb !important;
+        }
+
+        .printable-registration-form, .printable-enrollment-form {
+            font-family: Arial, sans-serif;
+            font-size: 8.5pt; /* Reduced from 9pt */
+            color: #000;
+            background-color: #fff !important;
+        }
+        .printable-registration-form .page-break, .printable-enrollment-form .page-break {
+            page-break-before: always;
+        }
+        .printable-registration-form table, .printable-enrollment-form table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+            margin-top: 5px;
+        }
+        .printable-registration-form th,
+        .printable-registration-form td,
+        .printable-enrollment-form th,
+        .printable-enrollment-form td {
+            border: 1px solid #000;
+            padding: 1px 3px;
+            vertical-align: top;
+        }
+        .printable-registration-form .section-title, .printable-enrollment-form .section-title {
+            background-color: #e0e0e0 !important;
+            font-weight: bold;
+            font-size: 9.5pt; /* Reduced from 10pt */
+            text-align: center;
+        }
+        .printable-registration-form .field-label, .printable-enrollment-form .field-label {
+            display: block;
+            font-size: 7pt;
+            color: #333;
+            margin-bottom: -2px;
+        }
+        .printable-registration-form .field-value, .printable-enrollment-form .field-value {
+            font-weight: bold;
+            min-height: 1.2em;
+        }
+        .printable-registration-form .photo-box, .printable-enrollment-form .photo-box {
+            width: 100px;
+            height: 125px;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 8pt;
+            margin: auto;
+        }
+        .printable-registration-form .no-border, .printable-enrollment-form .no-border { border: none !important; }
+        .printable-registration-form .text-center, .printable-enrollment-form .text-center { text-align: center; }
+
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+          margin-top: 0;
+        }
+        
+        @page landscape {
+          size: A4 landscape;
+          margin: 10mm;
+          margin-top: 0;
+        }
+        .print-landscape {
+          page: landscape;
+        }
+
+
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          background: none;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        th, td {
+          border: 1px solid #ccc;
+          padding: 8px;
+          text-align: left;
+        }
+        h1, h2, h3, h4 {
+          color: #000 !important;
+        }
+      }
+      
+      /* Styles for PDF generation of the guide */
+      .pdf-guide-styles {
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        color: #000;
+        line-height: 1.4;
+      }
+      .pdf-guide-styles h3, .pdf-guide-styles h4, .pdf-guide-styles p, .pdf-guide-styles ul, .pdf-guide-styles ol, .pdf-guide-styles pre {
+        margin-top: 0.6em !important;
+        margin-bottom: 0.6em !important;
+      }
+      .pdf-guide-styles h3 {
+        font-size: 14pt;
+        break-after: avoid;
+      }
+      .pdf-guide-styles h4 {
+        font-size: 12pt;
+        break-after: avoid;
+      }
+      .pdf-guide-styles li {
+        margin-top: 0.2em !important;
+        margin-bottom: 0.2em !important;
+      }
+      .pdf-guide-styles pre {
+        font-size: 8.5pt;
+        padding: 0.75em !important;
+        background-color: #f3f4f6 !important;
+        border-radius: 4px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        color: #111827 !important;
+      }
+      .pdf-guide-styles a {
+          color: #0000EE !important;
+          text-decoration: underline !important;
+      }
+      .pdf-guide-styles code {
+          font-size: 8pt !important;
+      }
+
+      /* Styles for Annual Report PDF/Print */
+      .printable-annual-report {
+          font-family: Arial, sans-serif;
+          font-size: 10pt;
+          color: #000;
+      }
+      .printable-annual-report table {
+          width: 100%;
+          border-collapse: collapse;
+      }
+      .printable-annual-report th,
+      .printable-annual-report td {
+          border: 1px solid #333;
+          padding: 4px; /* Slightly increased padding */
+          text-align: left;
+          vertical-align: middle;
+      }
+      .printable-annual-report th {
+          background-color: #f3f4f6 !important;
+          font-weight: bold;
+          font-size: 9pt; /* Slightly increased font for headers */
+          word-break: break-word; /* Break long assessment names */
+          text-align: center;
+      }
+      .printable-annual-report .text-center {
+          text-align: center;
+      }
+      .printable-annual-report .font-bold {
+          font-weight: bold;
+      }
+
+
+    </style>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
