@@ -18,7 +18,9 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { EnrollmentProvider } from './contexts/EnrollmentContext';
 import PublicEnrollmentForm from './components/PublicEnrollmentForm';
 import Students from './components/Students';
-import SignaturesAndPermissions from './components/SignaturesAndPermissions';
+import Settings from './components/Settings';
+import Login from './components/Login';
+import { useAuth } from './contexts/AuthContext';
 
 
 // --- School Info Context ---
@@ -95,6 +97,7 @@ export const useSchoolInfo = (): SchoolInfoContextType => {
 
 
 const App: React.FC = () => {
+  const { isAuthenticated } = useAuth();
   const [activeView, setActiveView] = useState<View>(View.DASHBOARD);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -128,8 +131,8 @@ const App: React.FC = () => {
         return <Declarations />;
       case View.ATAS:
         return <Minutes />;
-      case View.SIGNATURES:
-        return <SignaturesAndPermissions />;
+      case View.SETTINGS:
+        return <Settings />;
       case View.ARCHIVE:
         return <Archive />;
       default:
@@ -155,13 +158,9 @@ const App: React.FC = () => {
                     onClose={handlePublicFormClose} 
                     onSuccess={() => { /* After submission, the "Fechar" button will only trigger onClose */ }} 
                 />
-                <style>{`
-                  .bg-grid-pattern {
-                    background-image: linear-gradient(var(--grid-pattern-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-pattern-color) 1px, transparent 1px);
-                    background-size: 2rem 2rem;
-                  }
-                `}</style>
               </div>
+            ) : !isAuthenticated ? (
+              <Login />
             ) : (
               <div className="relative min-h-screen md:flex bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans bg-grid-pattern">
                 <Sidebar activeView={activeView} setActiveView={setActiveView} isSidebarOpen={isSidebarOpen} closeSidebar={() => setIsSidebarOpen(false)} />
@@ -190,28 +189,27 @@ const App: React.FC = () => {
                 )}
 
                 {isChatbotOpen && <Chatbot onClose={() => setIsChatbotOpen(false)} />}
-                
-                <style>{`
-                  .bg-grid-pattern {
-                    background-image: linear-gradient(var(--grid-pattern-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-pattern-color) 1px, transparent 1px);
-                    background-size: 2rem 2rem;
-                  }
-                  @keyframes pulse-slow {
-                    0%, 100% {
-                      transform: scale(1);
-                      box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
-                    }
-                    50% {
-                      transform: scale(1.05);
-                      box-shadow: 0 0 0 10px rgba(20, 184, 166, 0);
-                    }
-                  }
-                  .animate-pulse-slow {
-                    animation: pulse-slow 3s infinite;
-                  }
-                `}</style>
               </div>
             )}
+            <style>{`
+              .bg-grid-pattern {
+                background-image: linear-gradient(var(--grid-pattern-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-pattern-color) 1px, transparent 1px);
+                background-size: 2rem 2rem;
+              }
+              @keyframes pulse-slow {
+                0%, 100% {
+                  transform: scale(1);
+                  box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4);
+                }
+                50% {
+                  transform: scale(1.05);
+                  box-shadow: 0 0 0 10px rgba(20, 184, 166, 0);
+                }
+              }
+              .animate-pulse-slow {
+                animation: pulse-slow 3s infinite;
+              }
+            `}</style>
           </SchoolInfoProvider>
         </EnrollmentProvider>
       </NotificationProvider>

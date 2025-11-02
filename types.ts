@@ -12,7 +12,7 @@ export enum View {
   REPORTS = 'Relatórios',
   DECLARATIONS = 'Declarações',
   ATAS = 'Atas',
-  SIGNATURES = 'Assinaturas e Permissões',
+  SETTINGS = 'Configurações',
   ARCHIVE = 'Arquivo',
 }
 
