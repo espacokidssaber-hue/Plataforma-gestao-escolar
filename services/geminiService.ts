@@ -1,13 +1,17 @@
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
-// @ts-ignore
+// FIX: Use process.env.API_KEY as per the guidelines to access the API key.
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  throw new Error("API_KEY environment variable not set");
+  // FIX: Updated error message to reflect the correct environment variable name.
+  console.error("API_KEY environment variable not set. Please check your .env file or Vercel environment variables.");
+  // We won't throw an error here to allow the app to load, but API calls will fail.
+  // The UI should handle the error gracefully when a Gemini function is called.
 }
 
+// Initialize with a potentially null key, let the API call handle the error.
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 // Using gemini-flash-lite-latest for low-latency responses as requested.
@@ -15,19 +19,33 @@ const chat: Chat = ai.chats.create({
   model: 'gemini-flash-lite-latest',
 });
 
+const getAiInstance = () => {
+    // FIX: Switched from import.meta.env to process.env.API_KEY to align with guidelines and fix the TypeScript error.
+    const key = process.env.API_KEY;
+    if (!key) {
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique as variáveis de ambiente na Vercel.");
+    }
+    // Return a new instance to be safe, though the global one should work
+    return new GoogleGenAI({ apiKey: key });
+}
+
+
 export const streamMessage = async (message: string) => {
   try {
+    const aiInstance = getAiInstance();
+    const chat = aiInstance.chats.create({ model: 'gemini-flash-lite-latest' });
     const result = await chat.sendMessageStream({ message });
     return result;
   } catch (error) {
     console.error("Error sending message to Gemini:", error);
-    throw new Error("Failed to get response from AI. Please check your API key and network connection.");
+    throw new Error("Falha ao obter resposta da IA. Verifique sua chave de API e conexão com a internet.");
   }
 };
 
 export const streamDocumentText = async (prompt: string) => {
   try {
-    const response = await ai.models.generateContentStream({
+    const aiInstance = getAiInstance();
+    const response = await aiInstance.models.generateContentStream({
        model: "gemini-2.5-flash",
        contents: prompt,
     });
@@ -41,7 +59,8 @@ export const streamDocumentText = async (prompt: string) => {
 
 export const generateJsonFromText = async (prompt: string, schema: any) => {
   try {
-    const response = await ai.models.generateContent({
+    const aiInstance = getAiInstance();
+    const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
@@ -55,7 +74,7 @@ export const generateJsonFromText = async (prompt: string, schema: any) => {
   } catch (error)
   {
     console.error("Error generating JSON from Gemini:", error);
-    throw new Error("Failed to get a valid JSON response from AI.");
+    throw new Error("Falha ao obter uma resposta JSON válida da IA.");
   }
 };
 
@@ -150,6 +169,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = {
             inlineData: {
                 mimeType: 'application/pdf',
@@ -157,7 +177,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
             },
         };
         
-        const response = await ai.models.generateContent({
+        const response = await aiInstance.models.generateContent({
             model: 'gemini-2.5-pro',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
@@ -180,15 +200,21 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 
 export const generateDocumentText = async (prompt: string): Promise<string> => {
   try {
-    const response = await ai.models.generateContent({
+    const aiInstance = getAiInstance();
+    const stream = await aiInstance.models.generateContentStream({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    const text = response.text;
-    if (!text || text.trim() === '') {
+
+    let fullText = '';
+    for await (const chunk of stream) {
+        fullText += chunk.text;
+    }
+    
+    if (!fullText || fullText.trim() === '') {
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
     }
-    return text;
+    return fullText;
   } catch (error) {
     console.error("Error generating document text from Gemini:", error);
     // Re-throw the error to be caught and displayed by the calling component.
@@ -205,7 +231,8 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
         },
     };
     try {
-        const response = await ai.models.generateContentStream({
+        const aiInstance = getAiInstance();
+        const response = await aiInstance.models.generateContentStream({
             model: 'gemini-2.5-flash', // Switched to a faster model
             contents: { parts: [{ text: prompt }, pdfPart] },
         });
@@ -258,8 +285,9 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
-        const response = await ai.models.generateContent({
+        const response = await aiInstance.models.generateContent({
             model: 'gemini-2.5-pro',
             contents: { parts: [{ text: prompt }, pdfPart] },
             config: {
@@ -384,9 +412,10 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         
-        const response = await ai.models.generateContent({
+        const response = await aiInstance.models.generateContent({
             model: 'gemini-2.5-pro',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
