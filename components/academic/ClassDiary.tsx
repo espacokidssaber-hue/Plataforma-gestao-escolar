@@ -11,9 +11,13 @@ const MOCK_TEACHER_CLASSES_LIST = [
     { id: 4, name: '4º Ano Tarde', grade: '4º Ano'}
 ];
 
-const ClassDiary: React.FC = () => {
-    const { classLogs, addClassLog, updateClassLog, deleteClassLog } = useEnrollment();
-    const [selectedClassId, setSelectedClassId] = useState<number | null>(MOCK_TEACHER_CLASSES_LIST[0]?.id || null);
+interface ClassDiaryProps {
+  selectedClass: { id: number; name:string } | null;
+}
+
+const ClassDiary: React.FC<ClassDiaryProps> = ({ selectedClass: initialSelectedClass }) => {
+    const { classLogs, addClassLog, updateClassLog, deleteClassLog, classes } = useEnrollment();
+    const [selectedClassId, setSelectedClassId] = useState<number | null>(initialSelectedClass?.id || MOCK_TEACHER_CLASSES_LIST[0]?.id || null);
     
     const [isEditing, setIsEditing] = useState<ClassLogEntry | null>(null);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -32,8 +36,11 @@ const ClassDiary: React.FC = () => {
 
     // Reset form when class changes to avoid editing a log from a different class
     useEffect(() => {
+        if(initialSelectedClass) {
+            setSelectedClassId(initialSelectedClass.id);
+        }
         resetForm();
-    }, [selectedClassId]);
+    }, [selectedClassId, initialSelectedClass]);
     
     const resetForm = () => {
         setDate(new Date().toISOString().split('T')[0]);
@@ -96,7 +103,7 @@ const ClassDiary: React.FC = () => {
                         onChange={(e) => setSelectedClassId(Number(e.target.value))}
                         className="bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600"
                     >
-                        {MOCK_TEACHER_CLASSES_LIST.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                      </select>
                 </div>
             </header>

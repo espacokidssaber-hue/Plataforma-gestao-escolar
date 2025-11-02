@@ -12,6 +12,7 @@ import { useSchoolInfo } from '../../App';
 import { extractGradesFromPdf, ExtractedGrade } from '../../services/geminiService';
 import ImportGradesModal from './ImportGradesModal';
 import ImportGradesResultModal from './ImportGradesResultModal';
+import StudentObservationModal from './StudentObservationModal';
 
 
 interface GradesAndAttendanceProps {
@@ -58,7 +59,7 @@ const AttendanceSelector: React.FC<{ value: AttendanceStatus, onChange: (value: 
 
 const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass: initialSelectedClass }) => {
     // FIX: Destructured schoolInfo from the correct context hook (useSchoolInfo).
-    const { classLogs, subjects, addSubject } = useEnrollment();
+    const { classLogs, subjects, addSubject, classes } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
     const [activeTab, setActiveTab] = useState<'attendance' | 'grades'>('grades');
     const [selectedClass, setSelectedClass] = useState(initialSelectedClass);
@@ -81,6 +82,16 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
     const [isImporting, setIsImporting] = useState(false);
     const [importResult, setImportResult] = useState<{ newSubjects: string[], updatedCount: number, studentName: string } | null>(null);
 
+    // Observation states
+    const [isObservationModalOpen, setIsObservationModalOpen] = useState(false);
+    const [studentForObservation, setStudentForObservation] = useState<StudentAcademicRecord | null>(null);
+
+
+    useEffect(() => {
+        if (initialSelectedClass) {
+            setSelectedClass(initialSelectedClass);
+        }
+    }, [initialSelectedClass]);
 
     useEffect(() => {
         if (selectedClass) {
@@ -120,9 +131,19 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
     }, [studentsData, initialStudentsData]);
 
     const handleSave = () => {
+        // Here you would also push the changes to a backend/global state
         setInitialStudentsData(JSON.parse(JSON.stringify(studentsData)));
         alert('Alterações salvas com sucesso (simulação).');
     };
+
+    const handleSaveObservation = (studentId: number, newObservations: StudentAcademicRecord['observations']) => {
+        const updatedStudents = studentsData.map(s => 
+            s.studentId === studentId ? { ...s, observations: newObservations } : s
+        );
+        setStudentsData(updatedStudents);
+        handleSave(); // Persist changes immediately
+    };
+
 
     const handleGenerateDiary = (config: PrintDiaryConfig) => {
         if (!selectedClass) return;
@@ -197,7 +218,6 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                     if (!subjectExists) {
                         const newSubject = addSubject(item.subjectName);
                         currentSubjects.push(newSubject);
-                        subjectExists = newSubject;
                         newlyCreatedSubjects.add(item.subjectName);
                     }
                     
@@ -239,11 +259,11 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Lançamento de Notas e Frequência</h2>
                  <select 
                     value={selectedClass?.id || ''} 
-                    onChange={e => setSelectedClass(MOCK_TEACHER_CLASSES_LIST.find(c => c.id === Number(e.target.value)) || null)}
+                    onChange={e => setSelectedClass(classes.find(c => c.id === Number(e.target.value)) || null)}
                     className="bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
                  >
                     <option value="">Selecione uma turma</option>
-                    {MOCK_TEACHER_CLASSES_LIST.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
             </div>
              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
@@ -275,6 +295,7 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                                 <th className="p-2">Aluno</th>
                                 {subjects.find(s => s.id === selectedSubjectId)?.assessments.map(ass => <th key={ass.name} className="p-2 text-center">{ass.name}</th>)}
                                 <th className="p-2 text-center">Boletim Anual</th>
+                                <th className="p-2 text-center">Observações</th>
                             </tr>
                            </thead>
                            <tbody>
@@ -300,6 +321,11 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                                      <td className="p-2 text-center">
                                         <button onClick={() => setStudentForReport(student)} className="text-blue-500 hover:text-blue-400" title="Ver boletim anual completo">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                        </button>
+                                    </td>
+                                     <td className="p-2 text-center">
+                                        <button onClick={() => { setStudentForObservation(student); setIsObservationModalOpen(true); }} className="text-purple-500 hover:text-purple-400" title="Ver/Adicionar Observações">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                                         </button>
                                     </td>
                                 </tr>
@@ -354,6 +380,14 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                 student={studentForReport}
                 subjects={subjects}
                 onClose={() => setStudentForReport(null)}
+            />
+        )}
+        
+        {isObservationModalOpen && studentForObservation && (
+            <StudentObservationModal
+                student={studentForObservation}
+                onClose={() => setIsObservationModalOpen(false)}
+                onSave={handleSaveObservation}
             />
         )}
 

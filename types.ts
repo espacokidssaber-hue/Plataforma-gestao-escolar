@@ -12,11 +12,12 @@ export enum View {
   REPORTS = 'Relatórios',
   DECLARATIONS = 'Declarações',
   ATAS = 'Atas',
+  SIGNATURES = 'Assinaturas e Contratos',
   SETTINGS = 'Configurações',
   ARCHIVE = 'Arquivo',
 }
 
-export type UserRole = 'admin' | 'educator';
+export type UserRole = 'admin' | 'educator' | 'secretary';
 
 // Chat
 export enum MessageRole {
@@ -302,9 +303,9 @@ export interface SchoolClass {
     unit: SchoolUnit;
     room: string;
     teachers: {
-        matriz: string;
-        filial: string;
-        anexo: string;
+        matriz: number | null;
+        filial: number | null;
+        anexo: number | null;
     };
     capacity: ClassCapacity;
     students: EnrolledStudent[];
@@ -327,6 +328,7 @@ export interface StudentAcademicRecord {
     attendance: {
         [date: string]: AttendanceStatus;
     };
+    observations?: { date: string; author: string; text: string }[];
 }
 
 export interface ReportCard {

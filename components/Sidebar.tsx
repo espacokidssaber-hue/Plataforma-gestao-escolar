@@ -29,6 +29,7 @@ const NavItem: React.FC<{icon: React.ReactNode, label: string, active?: boolean,
 const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isSidebarOpen, closeSidebar }) => {
     const { schoolInfo } = useSchoolInfo();
     const { user, logout } = useAuth();
+    const userRole = user?.role;
 
     const handleNavigation = (view: View) => {
         setActiveView(view);
@@ -45,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isSidebarO
         reports: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
         declarations: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
         minutes: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6a3 3 0 00-3-3H6.75a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V9A3 3 0 0016.5 6z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M18.75 10.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" /></svg>,
+        signatures: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>,
         settings: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>,
         archive: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>,
         logout: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>,
@@ -73,19 +75,49 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isSidebarO
                     </button>
                 </div>
                 <nav className="flex-grow py-6 space-y-2 overflow-y-auto">
+                    {/* Dashboard - All roles */}
                     <NavItem icon={icons.dashboard} label={View.DASHBOARD} active={activeView === View.DASHBOARD} onClick={() => handleNavigation(View.DASHBOARD)} />
-                    <NavItem icon={icons.admissions} label={View.ENROLLMENTS} active={activeView === View.ENROLLMENTS} onClick={() => handleNavigation(View.ENROLLMENTS)} />
-                    <NavItem icon={icons.students} label={View.STUDENTS} active={activeView === View.STUDENTS} onClick={() => handleNavigation(View.STUDENTS)} />
+
+                    {/* Admin & Secretary only */}
+                    {(userRole === 'admin' || userRole === 'secretary') && (
+                        <>
+                            <NavItem icon={icons.admissions} label={View.ENROLLMENTS} active={activeView === View.ENROLLMENTS} onClick={() => handleNavigation(View.ENROLLMENTS)} />
+                            <NavItem icon={icons.students} label={View.STUDENTS} active={activeView === View.STUDENTS} onClick={() => handleNavigation(View.STUDENTS)} />
+                        </>
+                    )}
+
+                    {/* Academic - All roles */}
                     <NavItem icon={icons.academic} label={View.ACADEMIC} active={activeView === View.ACADEMIC} onClick={() => handleNavigation(View.ACADEMIC)} />
-                    <NavItem icon={icons.financial} label={View.FINANCIAL} active={activeView === View.FINANCIAL} onClick={() => handleNavigation(View.FINANCIAL)} />
-                    <NavItem icon={icons.communication} label={View.COMMUNICATION} active={activeView === View.COMMUNICATION} onClick={() => handleNavigation(View.COMMUNICATION)} />
-                    <NavItem icon={icons.reports} label={View.REPORTS} active={activeView === View.REPORTS} onClick={() => handleNavigation(View.REPORTS)} />
-                    <NavItem icon={icons.declarations} label={View.DECLARATIONS} active={activeView === View.DECLARATIONS} onClick={() => handleNavigation(View.DECLARATIONS)} />
-                    <NavItem icon={icons.minutes} label={View.ATAS} active={activeView === View.ATAS} onClick={() => handleNavigation(View.ATAS)} />
-                    {user?.role === 'admin' && (
+                    
+                    {/* Admin only */}
+                    {userRole === 'admin' && (
+                        <NavItem icon={icons.financial} label={View.FINANCIAL} active={activeView === View.FINANCIAL} onClick={() => handleNavigation(View.FINANCIAL)} />
+                    )}
+
+                    {/* Admin & Secretary & Educator */}
+                    {(userRole === 'admin' || userRole === 'secretary' || userRole === 'educator') && (
+                        <NavItem icon={icons.communication} label={View.COMMUNICATION} active={activeView === View.COMMUNICATION} onClick={() => handleNavigation(View.COMMUNICATION)} />
+                    )}
+                    
+                    {/* Admin & Secretary only */}
+                    {(userRole === 'admin' || userRole === 'secretary') && (
+                        <>
+                            <NavItem icon={icons.reports} label={View.REPORTS} active={activeView === View.REPORTS} onClick={() => handleNavigation(View.REPORTS)} />
+                            <NavItem icon={icons.declarations} label={View.DECLARATIONS} active={activeView === View.DECLARATIONS} onClick={() => handleNavigation(View.DECLARATIONS)} />
+                            <NavItem icon={icons.minutes} label={View.ATAS} active={activeView === View.ATAS} onClick={() => handleNavigation(View.ATAS)} />
+                            <NavItem icon={icons.signatures} label={View.SIGNATURES} active={activeView === View.SIGNATURES} onClick={() => handleNavigation(View.SIGNATURES)} />
+                        </>
+                    )}
+                    
+                    {/* Admin only */}
+                    {userRole === 'admin' && (
                         <NavItem icon={icons.settings} label={View.SETTINGS} active={activeView === View.SETTINGS} onClick={() => handleNavigation(View.SETTINGS)} />
                     )}
-                    <NavItem icon={icons.archive} label={View.ARCHIVE} active={activeView === View.ARCHIVE} onClick={() => handleNavigation(View.ARCHIVE)} />
+
+                    {/* Admin & Secretary only */}
+                    {(userRole === 'admin' || userRole === 'secretary') && (
+                        <NavItem icon={icons.archive} label={View.ARCHIVE} active={activeView === View.ARCHIVE} onClick={() => handleNavigation(View.ARCHIVE)} />
+                    )}
                 </nav>
                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700/50">
                     <NavItem icon={icons.logout} label="Sair" onClick={logout} />

@@ -304,18 +304,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ student, onClose })
                                 </section>
                             ))}
                             <section className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900/30">
-                                <h3 className="font-semibold mb-2 text-gray-800 dark:text-gray-200">Permissões</h3>
-                                <label className="flex items-center">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={editedStudent.imageUsagePermission ?? true}
-                                        onChange={e => setEditedStudent(prev => ({...prev, imageUsagePermission: e.target.checked}))}
-                                        className="h-4 w-4 rounded text-teal-500" 
-                                    />
-                                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                                        Responsável autoriza o uso da imagem do aluno para fins pedagógicos e de divulgação da escola.
-                                    </span>
-                                </label>
+                                <h3 className="font-semibold mb-2 text-gray-800 dark:text-gray-200">Permissão de Uso de Imagem</h3>
+                                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/40 rounded-md border border-yellow-200 dark:border-yellow-700">
+                                    <label className="flex items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={!(editedStudent.imageUsagePermission ?? true)}
+                                            onChange={e => setEditedStudent(prev => ({...prev, imageUsagePermission: !e.target.checked}))}
+                                            className="h-4 w-4 rounded text-yellow-600 focus:ring-yellow-500" 
+                                        />
+                                        <span className="ml-3 text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                                            Marque esta caixa se o responsável <span className="font-bold underline">NÃO</span> autoriza o uso da imagem do aluno.
+                                        </span>
+                                    </label>
+                                    <p className="ml-7 mt-1 text-xs text-yellow-700 dark:text-yellow-300">
+                                        Se esta caixa for marcada, o aluno aparecerá na lista de alerta em "Assinaturas e Contratos".
+                                    </p>
+                                </div>
                             </section>
                         </div>
                     )}

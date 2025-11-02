@@ -21,7 +21,8 @@ export const MOCK_STUDENTS_ACADEMIC: Record<number, StudentAcademicRecord[]> = {
                 '2025-03-11': 'Presente',
                 '2025-03-12': 'Falta',
                 '2025-03-13': 'Presente',
-            }
+            },
+            observations: [],
         },
     ],
     2: [ // 1º Ano A
@@ -40,7 +41,10 @@ export const MOCK_STUDENTS_ACADEMIC: Record<number, StudentAcademicRecord[]> = {
                 '2025-03-11': 'Presente',
                 '2025-03-12': 'Presente',
                 '2025-03-13': 'Presente',
-            }
+            },
+            observations: [
+                { date: '2025-03-15', author: 'Prof. Carlos Souza', text: 'Bento demonstrou grande interesse no experimento de ciências, fazendo perguntas pertinentes. Apresenta alguma dificuldade com os desafios lógicos de matemática, mas é muito esforçado.' }
+            ],
         },
     ],
     3: [ // 2º Ano B
@@ -58,7 +62,8 @@ export const MOCK_STUDENTS_ACADEMIC: Record<number, StudentAcademicRecord[]> = {
                 '2025-03-11': 'Falta',
                 '2025-03-12': 'Justificado',
                 '2025-03-13': 'Presente',
-            }
+            },
+            observations: [],
         }
     ]
 };

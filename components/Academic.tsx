@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AcademicSubView } from '../types';
 import TeacherDashboard from './academic/TeacherDashboard';
 import GradesAndAttendance from './academic/GradesAndAttendance';
@@ -9,6 +9,7 @@ import Educators from './academic/Educators';
 import Schedules from './academic/Schedules';
 import Subjects from './academic/Subjects';
 import ClassDiary from './academic/ClassDiary';
+import { useAuth } from '../contexts/AuthContext';
 
 const SubNavButton: React.FC<{
     label: string;
@@ -28,12 +29,24 @@ const SubNavButton: React.FC<{
 );
 
 const Academic: React.FC = () => {
+    const { user } = useAuth();
     const [activeSubView, setActiveSubView] = useState<AcademicSubView>(AcademicSubView.TEACHER_DASHBOARD);
     const [selectedClass, setSelectedClass] = useState<{ id: number; name: string } | null>(null);
 
-    const handleSelectClass = (classInfo: { id: number; name: string }) => {
+    const availableSubViews = useMemo(() => {
+        if (user?.role === 'educator') {
+            return [
+                AcademicSubView.TEACHER_DASHBOARD,
+                AcademicSubView.GRADES_ATTENDANCE,
+                AcademicSubView.CLASS_DIARY
+            ];
+        }
+        return Object.values(AcademicSubView);
+    }, [user]);
+
+    const handleSelectClass = (classInfo: { id: number; name: string }, targetView: AcademicSubView = AcademicSubView.GRADES_ATTENDANCE) => {
         setSelectedClass(classInfo);
-        setActiveSubView(AcademicSubView.GRADES_ATTENDANCE);
+        setActiveSubView(targetView);
     };
 
     const renderSubView = () => {
@@ -49,7 +62,8 @@ const Academic: React.FC = () => {
             case AcademicSubView.ACTIVITIES_FOR_PRINTING:
                 return <ActivitiesForPrinting />;
             case AcademicSubView.CLASS_DIARY:
-                return <ClassDiary />;
+                 // Pass selectedClass to ClassDiary so it knows which class to show logs for
+                return <ClassDiary selectedClass={selectedClass} />;
             case AcademicSubView.EDUCATORS:
                 return <Educators />;
             case AcademicSubView.SCHEDULES:
@@ -75,7 +89,7 @@ const Academic: React.FC = () => {
             </header>
             
             <nav className="flex items-center space-x-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-3 overflow-x-auto">
-                {Object.values(AcademicSubView).map(view => (
+                {availableSubViews.map(view => (
                     <SubNavButton
                         key={view}
                         label={view}

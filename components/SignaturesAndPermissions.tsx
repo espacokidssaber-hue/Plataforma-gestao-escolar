@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useAuth, MOCK_USERS } from '../contexts/AuthContext';
+// FIX: Removed MOCK_USERS from import and will use `users` from context instead.
+import { useAuth } from '../contexts/AuthContext';
 import { User } from '../contexts/AuthContext';
 
 const Settings: React.FC = () => {
-    const { user } = useAuth();
-    // In a real app, this would come from an API
-    const [users, setUsers] = useState<User[]>(MOCK_USERS); 
+    // FIX: Get `users` from the AuthContext.
+    const { user, users } = useAuth();
     
     // This is a placeholder for future functionality
     const handleAddUser = () => {

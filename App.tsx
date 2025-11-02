@@ -21,6 +21,7 @@ import Students from './components/Students';
 import Settings from './components/Settings';
 import Login from './components/Login';
 import { useAuth } from './contexts/AuthContext';
+import SignaturesAndContracts from './components/SignaturesAndContracts';
 
 
 // --- School Info Context ---
@@ -131,6 +132,8 @@ const App: React.FC = () => {
         return <Declarations />;
       case View.ATAS:
         return <Minutes />;
+      case View.SIGNATURES:
+        return <SignaturesAndContracts />;
       case View.SETTINGS:
         return <Settings />;
       case View.ARCHIVE:
