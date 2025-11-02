@@ -1,14 +1,14 @@
-// FIX: Removed Vite-specific type reference. The API key is now sourced from process.env.
 
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // FIX: Switched from Vite's import.meta.env to standard process.env.API_KEY as per guidelines, resolving type errors.
+    // FIX: Changed from import.meta.env.VITE_API_KEY to process.env.API_KEY to follow the coding guidelines and resolve build errors.
+    // Acessa a chave de API a partir de process.env.API_KEY conforme as diretrizes.
     const key = process.env.API_KEY;
     if (!key) {
-        // FIX: Updated error message to reflect the correct environment variable.
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
+        // Mensagem de erro atualizada para refletir a variável correta.
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida no seu ambiente de implantação.");
     }
     // Cria uma nova instância a cada chamada para garantir que a chave mais atual seja usada.
     return new GoogleGenAI({ apiKey: key });
@@ -53,7 +53,7 @@ export const generateJsonFromText = async (prompt: string, schema: any) => {
         responseSchema: schema,
       },
     });
-    // FIX: Access the generated text via the .text property directly.
+    
     const jsonText = response.text.trim();
     return JSON.parse(jsonText);
   } catch (error)
