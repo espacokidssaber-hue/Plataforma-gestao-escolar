@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatus, SchoolUnit } from '../../types';
+import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatus, SchoolUnit } from '../types';
 import { generateDocumentText } from '../services/geminiService';
 import PrintableDeclaration from './declarations/PrintableDeclaration';
 import ManageDeclarationTypesModal from './declarations/ManageDeclarationTypesModal';
-import { useSchoolInfo } from '../../App';
+import { useSchoolInfo } from '../App';
 
 // --- AVATAR UTILS START ---
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };

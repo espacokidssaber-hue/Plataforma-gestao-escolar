@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { streamDocumentText } from '../services/geminiService';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
 
 // html2pdf is loaded globally from index.html

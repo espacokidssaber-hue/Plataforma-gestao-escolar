@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SchoolUnit, SchoolInfo, EnrolledStudent, Guardian, StudentAddress, StudentLifecycleStatus } from '../../types';
+import { SchoolUnit, SchoolInfo, EnrolledStudent, Guardian, StudentAddress, StudentLifecycleStatus } from '../types';
 import { streamTextFromPdf } from '../services/geminiService';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
-import { useSchoolInfo } from '../../App';
+import { useSchoolInfo } from '../App';
 
 
 const SettingsCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
