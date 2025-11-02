@@ -164,7 +164,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
         };
         
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
                 responseMimeType: "application/json",
@@ -271,7 +271,7 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
         const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: { parts: [{ text: prompt }, pdfPart] },
             config: {
                 responseMimeType: "application/json",
@@ -399,7 +399,7 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
                 responseMimeType: "application/json",
