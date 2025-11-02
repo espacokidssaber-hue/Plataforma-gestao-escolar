@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatus, SchoolUnit } from '../../types';
-import { generateDocumentText } from '../../services/geminiService';
+import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatus, SchoolUnit } from '../types';
+import { generateDocumentText } from '../services/geminiService';
 import PrintableDeclaration from './declarations/PrintableDeclaration';
 import ManageDeclarationTypesModal from './declarations/ManageDeclarationTypesModal';
-import { useSchoolInfo } from '../../App';
+import { useSchoolInfo } from '../App';
 
 // --- AVATAR UTILS START ---
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
@@ -11,7 +11,6 @@ const stringToColor = (str: string): string => { let hash = 0; if (!str) return 
 const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
 // --- AVATAR UTILS END ---
 
-// FIX: Add missing 'unit' property to MOCK_STUDENTS_LIST items to conform to the EnrolledStudent type.
 const MOCK_STUDENTS_LIST: EnrolledStudent[] = [
     { 
         id: 301, 
@@ -69,7 +68,6 @@ const INITIAL_TEMPLATES: DeclarationTemplate[] = [
 ];
 
 
-// FIX: Changed to a named export to resolve an import error.
 export const Declarations: React.FC = () => {
     const { schoolInfo, matrizInfo } = useSchoolInfo();
 

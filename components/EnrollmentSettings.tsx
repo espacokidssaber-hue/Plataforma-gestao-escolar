@@ -115,7 +115,6 @@ const stringToColor = (str: string): string => { let hash = 0; if (!str) return 
 const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
 // --- AVATAR UTILS END ---
 
-// FIX: Changed to a named export to resolve import error.
 export const EnrollmentSettings: React.FC = () => {
     const { 
         leads, applicants, enrolledStudents, classes, contacts, 

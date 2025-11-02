@@ -12,7 +12,6 @@ const MOCK_INVOICES: Invoice[] = [
 ];
 
 // Mock list of students to generate invoices for
-// FIX: Add missing 'unit' property to MOCK_STUDENTS_FOR_INVOICING items to conform to the EnrolledStudent type.
 const MOCK_STUDENTS_FOR_INVOICING: EnrolledStudent[] = [
     { id: 301, name: 'Alice Braga', grade: 'Infantil II', className: 'Infantil II A', classId: 1, unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
     { id: 302, name: 'Bento Ribeiro', grade: '1º Ano', className: '1º Ano A', classId: 2, unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
