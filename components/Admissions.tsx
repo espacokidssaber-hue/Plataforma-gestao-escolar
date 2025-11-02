@@ -13,7 +13,7 @@ import PublicEnrollmentForm from './PublicEnrollmentForm';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 import { extractEnrolledStudentsFromPdf, ExtractedStudent } from '../services/geminiService';
 import * as XLSX from 'xlsx';
-import { useSchoolInfo } from '../App';
+import { useSchoolInfo } from '../../App';
 
 const SubNavButton: React.FC<{
     label: string;

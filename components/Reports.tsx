@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { streamDocumentText } from '../../services/geminiService';
+import { streamDocumentText } from '../services/geminiService';
 import { useEnrollment } from '../../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
 

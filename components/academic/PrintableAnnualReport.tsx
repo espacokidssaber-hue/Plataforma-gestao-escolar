@@ -46,7 +46,8 @@ const PrintableAnnualReport: React.FC<PrintableAnnualReportProps> = ({ student, 
     };
 
     const subjectsWithGrades = subjects.filter(s => student.grades[s.name] && Object.keys(student.grades[s.name]).length > 0);
-    const allAssessments = [...new Set(subjectsWithGrades.flatMap(s => Object.keys(student.grades[s.name] || {})))];
+    // FIX: Explicitly type the 'ass' parameter in the map function to 'string' to resolve a type inference issue.
+    const allAssessments = [...new Set(subjectsWithGrades.flatMap(s => Object.keys(student.grades[s.name] || {}).map((ass: string) => ass)))];
 
 
     return (
@@ -76,6 +77,7 @@ const PrintableAnnualReport: React.FC<PrintableAnnualReportProps> = ({ student, 
                         return (
                             <tr key={subject.id}>
                                 <td className="font-semibold">{subject.name}</td>
+                                {/* FIX: Explicitly type 'ass' as a string to resolve TypeScript error where it was inferred as 'unknown', preventing its use as an index type. */}
                                 {allAssessments.map((ass: string) => (
                                     <td key={ass} className="text-center">
                                         {(subjectGrades[ass] as number)?.toFixed(1) ?? '-'}
