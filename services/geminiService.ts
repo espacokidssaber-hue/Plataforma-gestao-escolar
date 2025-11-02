@@ -1,31 +1,16 @@
-// Declare process to satisfy TypeScript, as per platform guidelines to use process.env
-declare const process: {
-  env: {
-    [key: string]: string | undefined;
-    API_KEY?: string;
-  };
-};
+// FIX: Removed Vite-specific type reference. The API key is now sourced from process.env.
 
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
-// Per guideline, must use process.env.API_KEY
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.error("API_KEY environment variable not set. Please check your Vercel environment variables.");
-}
-
-// Initialize with a potentially null key, let the API call handle the error.
-// The getAiInstance function will throw a more user-friendly error if the key is missing.
-const ai = new GoogleGenAI({ apiKey: API_KEY });
-
 const getAiInstance = () => {
+    // FIX: Switched from Vite's import.meta.env to standard process.env.API_KEY as per guidelines, resolving type errors.
     const key = process.env.API_KEY;
     if (!key) {
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida na Vercel.");
+        // FIX: Updated error message to reflect the correct environment variable.
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
     }
-    // It's safe to return a new instance as it will use the correct key.
+    // Cria uma nova instância a cada chamada para garantir que a chave mais atual seja usada.
     return new GoogleGenAI({ apiKey: key });
 }
 
