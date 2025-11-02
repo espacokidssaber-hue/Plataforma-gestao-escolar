@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SchoolInfo } from '../../types';
-import { generateDocumentText } from '../../services/geminiService';
+import { SchoolInfo } from '../types';
+import { generateDocumentText } from '../services/geminiService';
 import PrintableMinutes from './minutes/PrintableMinutes';
 
 const MINUTE_TYPES = [
