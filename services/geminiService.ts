@@ -1,16 +1,13 @@
-// FIX: Removed reference to "vite/client" as it was causing a type definition error
-// and is no longer needed after switching to process.env.
-
+// FIX: Removed reference to 'vite/client' as it was causing a type definition error and is no longer needed after switching to process.env.
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // FIX: Switched from import.meta.env.VITE_API_KEY to process.env.API_KEY to align with
-    // the coding guidelines and resolve TypeScript errors.
+    // FIX: Switched from Vite-specific 'import.meta.env.VITE_API_KEY' to 'process.env.API_KEY' to resolve the 'env' property error and align with project guidelines.
     const key = process.env.API_KEY;
 
     if (!key) {
-        // FIX: Updated error message to reflect the new environment variable.
+        // FIX: Updated the error message to reflect the change to the 'API_KEY' environment variable.
         throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
     }
 
