@@ -69,8 +69,7 @@ const INITIAL_TEMPLATES: DeclarationTemplate[] = [
 ];
 
 
-// FIX: Changed to a named export to resolve an import error.
-export const Declarations: React.FC = () => {
+const Declarations: React.FC = () => {
     const { schoolInfo, matrizInfo } = useSchoolInfo();
 
     const [declarationTemplates, setDeclarationTemplates] = useState<DeclarationTemplate[]>(() => {
@@ -253,3 +252,5 @@ export const Declarations: React.FC = () => {
         </div>
     );
 };
+
+export default Declarations;

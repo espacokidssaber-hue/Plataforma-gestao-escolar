@@ -1,15 +1,5 @@
-import React, { useState, createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { useState, createContext, useContext, useEffect, ReactNode, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import Admissions from './components/Admissions';
-import Academic from './components/Academic';
-import Financial from './components/Financial';
-import Communication from './components/Communication';
-import Reports from './components/Reports';
-// FIX: Changed to named import to resolve module export error.
-import { Declarations } from './components/Declarations';
-import { Minutes } from './components/Minutes';
-import Archive from './components/Archive';
 import Chatbot from './components/Chatbot';
 import { View, SchoolInfo } from './types';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -17,11 +7,22 @@ import NotificationBell from './components/NotificationBell';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { EnrollmentProvider } from './contexts/EnrollmentContext';
 import PublicEnrollmentForm from './components/PublicEnrollmentForm';
-import Students from './components/Students';
-import Settings from './components/Settings';
 import Login from './components/Login';
 import { useAuth } from './contexts/AuthContext';
-import SignaturesAndContracts from './components/SignaturesAndContracts';
+
+// Lazy load components
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const Admissions = React.lazy(() => import('./components/Admissions'));
+const Students = React.lazy(() => import('./components/Students'));
+const Academic = React.lazy(() => import('./components/Academic'));
+const Financial = React.lazy(() => import('./components/Financial'));
+const Communication = React.lazy(() => import('./components/Communication'));
+const Reports = React.lazy(() => import('./components/Reports'));
+const Declarations = React.lazy(() => import('./components/Declarations'));
+const Minutes = React.lazy(() => import('./components/Minutes'));
+const Archive = React.lazy(() => import('./components/Archive'));
+const Settings = React.lazy(() => import('./components/Settings'));
+const SignaturesAndContracts = React.lazy(() => import('./components/SignaturesAndContracts'));
 
 
 // --- School Info Context ---
@@ -95,6 +96,15 @@ export const useSchoolInfo = (): SchoolInfoContextType => {
     return context;
 };
 // --- End School Info Context ---
+
+const LoadingFallback: React.FC = () => (
+    <div className="flex items-center justify-center h-full">
+        <svg className="animate-spin h-8 w-8 text-teal-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+);
 
 
 const App: React.FC = () => {
@@ -175,7 +185,9 @@ const App: React.FC = () => {
                       <NotificationBell />
                   </header>
                   <div className="flex-grow">
-                    {renderView()}
+                    <Suspense fallback={<LoadingFallback />}>
+                      {renderView()}
+                    </Suspense>
                   </div>
                 </main>
 

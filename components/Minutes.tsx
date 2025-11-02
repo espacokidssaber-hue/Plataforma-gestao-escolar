@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { SchoolInfo } from '../types';
-import { generateDocumentText } from '../services/geminiService';
+import { SchoolInfo } from '../../types';
+import { generateDocumentText } from '../../services/geminiService';
 import PrintableMinutes from './minutes/PrintableMinutes';
 
 const MINUTE_TYPES = [
@@ -12,7 +12,7 @@ const MINUTE_TYPES = [
     'Ata de Constituição de Comissão',
 ];
 
-export const Minutes: React.FC = () => {
+const Minutes: React.FC = () => {
     const [schoolInfo] = useState<SchoolInfo>(() => {
         const savedInfo = localStorage.getItem('schoolInfo');
         const defaults = {
@@ -166,3 +166,5 @@ export const Minutes: React.FC = () => {
         </div>
     );
 };
+
+export default Minutes;
