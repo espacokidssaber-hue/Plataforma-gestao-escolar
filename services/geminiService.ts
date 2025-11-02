@@ -187,15 +187,12 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 export const generateDocumentText = async (prompt: string): Promise<string> => {
   try {
     const aiInstance = getAiInstance();
-    const stream = await aiInstance.models.generateContentStream({
+    const response: GenerateContentResponse = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
 
-    let fullText = '';
-    for await (const chunk of stream) {
-        fullText += chunk.text;
-    }
+    const fullText = response.text;
     
     if (!fullText || fullText.trim() === '') {
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
