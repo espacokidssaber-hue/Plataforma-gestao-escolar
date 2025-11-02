@@ -1,16 +1,17 @@
-
+// FIX: Removed the Vite client type reference that was causing an error and is no longer needed.
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // FIX: Changed from import.meta.env.VITE_API_KEY to process.env.API_KEY to follow the coding guidelines and resolve build errors.
-    // Acessa a chave de API a partir de process.env.API_KEY conforme as diretrizes.
+    // FIX: Switched from Vite-specific import.meta.env to process.env.API_KEY to align with guidelines and resolve TypeScript errors.
     const key = process.env.API_KEY;
+
     if (!key) {
-        // Mensagem de erro atualizada para refletir a variável correta.
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida no seu ambiente de implantação.");
+        // The error message has been updated to reflect the correct environment variable.
+        throw new Error("The Gemini API key has not been configured. Check that the 'API_KEY' environment variable is set.");
     }
-    // Cria uma nova instância a cada chamada para garantir que a chave mais atual seja usada.
+
+    // Creates a new instance on each call to ensure the most current key is used.
     return new GoogleGenAI({ apiKey: key });
 }
 
