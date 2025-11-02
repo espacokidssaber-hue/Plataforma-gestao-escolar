@@ -1,31 +1,31 @@
+// Declare process to satisfy TypeScript, as per platform guidelines to use process.env
+declare const process: {
+  env: {
+    [key: string]: string | undefined;
+    API_KEY?: string;
+  };
+};
+
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
-// FIX: Use process.env.API_KEY as per the guidelines to access the API key.
+// Per guideline, must use process.env.API_KEY
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  // FIX: Updated error message to reflect the correct environment variable name.
-  console.error("API_KEY environment variable not set. Please check your .env file or Vercel environment variables.");
-  // We won't throw an error here to allow the app to load, but API calls will fail.
-  // The UI should handle the error gracefully when a Gemini function is called.
+  console.error("API_KEY environment variable not set. Please check your Vercel environment variables.");
 }
 
 // Initialize with a potentially null key, let the API call handle the error.
+// The getAiInstance function will throw a more user-friendly error if the key is missing.
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-// Using gemini-flash-lite-latest for low-latency responses as requested.
-const chat: Chat = ai.chats.create({
-  model: 'gemini-flash-lite-latest',
-});
-
 const getAiInstance = () => {
-    // FIX: Switched from import.meta.env to process.env.API_KEY to align with guidelines and fix the TypeScript error.
     const key = process.env.API_KEY;
     if (!key) {
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique as variáveis de ambiente na Vercel.");
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida na Vercel.");
     }
-    // Return a new instance to be safe, though the global one should work
+    // It's safe to return a new instance as it will use the correct key.
     return new GoogleGenAI({ apiKey: key });
 }
 
