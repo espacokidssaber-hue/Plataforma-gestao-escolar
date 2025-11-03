@@ -1,63 +1,69 @@
 // api/gemini.ts
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Part, GenerateContentRequest, Content } from "@google/genai";
 
 // Esta função será executada no servidor da Vercel
 export async function POST(request: Request) {
-  // 1. Pega o prompt e a flag de streaming enviados pelo frontend
-  const { prompt, stream } = await request.json();
-
-  if (!prompt) {
-    return new Response(JSON.stringify({ error: "O prompt é obrigatório." }), { status: 400 });
-  }
-
   try {
-    // 2. Acessa a chave de API de forma segura (do Environment Variable)
+    const { prompt, stream, model, pdfBase64, schema } = await request.json();
+
+    if (!prompt && !pdfBase64) {
+      return new Response(JSON.stringify({ error: "O prompt ou dados de PDF são obrigatórios." }), { status: 400 });
+    }
+
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      throw new Error("API_KEY não encontrada.");
+      throw new Error("API_KEY não foi encontrada nas variáveis de ambiente.");
     }
     
     const ai = new GoogleGenAI({ apiKey });
 
-    // 3. Decide entre streaming e resposta completa
-    if (stream) {
-      // 3a. Lida com a requisição de streaming
-      const streamResult = await ai.models.generateContentStream({
-          model: "gemini-flash-lite-latest",
-          contents: prompt,
-      });
+    let contentsPayload: string | Content;
+    if (pdfBase64) {
+        const parts: Part[] = [];
+        if (prompt) parts.push({ text: prompt });
+        parts.push({ inlineData: { mimeType: 'application/pdf', data: pdfBase64 } });
+        contentsPayload = { parts: parts };
+    } else {
+        // Must be text-only if no pdfBase64
+        contentsPayload = prompt;
+    }
+    
+    const payload: GenerateContentRequest = {
+        model: model || 'gemini-2.5-flash',
+        contents: contentsPayload,
+        config: {},
+    };
+    
+    if (schema) {
+        payload.config!.responseMimeType = "application/json";
+        payload.config!.responseSchema = schema;
+    }
 
-      // 4a. Cria um fluxo de resposta para enviar de volta ao frontend em tempo real
+    if (stream) {
+      const streamResult = await ai.models.generateContentStream(payload);
       const readableStream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
           for await (const chunk of streamResult) {
             const text = chunk.text;
             if (text) {
-              // Envia cada pedaço de texto de volta para o navegador
               controller.enqueue(encoder.encode(text));
             }
           }
           controller.close();
         },
       });
-
-      // 5a. Retorna o fluxo como resposta para o frontend
-      return new Response(readableStream, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      });
+      return new Response(readableStream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
     } else {
-      // 3b. Lida com a requisição de texto completo
-      const result = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-      });
+      const result = await ai.models.generateContent(payload);
+      const responseText = result.text;
       
-      const fullText = result.text;
+      // Se um schema foi fornecido, o Gemini já retorna um string JSON.
+      // Caso contrário, é texto puro que envolvemos em um objeto JSON para consistência.
+      const responseBody = schema ? responseText : JSON.stringify({ text: responseText });
       
-      // 4b. Retorna o texto completo em um objeto JSON
-      return new Response(JSON.stringify({ text: fullText }), {
+      return new Response(responseBody, {
           headers: { 'Content-Type': 'application/json' },
       });
     }
