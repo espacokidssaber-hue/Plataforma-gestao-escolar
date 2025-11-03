@@ -3,12 +3,10 @@ import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai"
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // FIX: Changed the environment variable for the API key to 'GOOGLE_API_KEY' as requested by the user.
-    const key = process.env.GOOGLE_API_KEY;
+    const key = process.env.API_KEY;
 
     if (!key) {
-        // FIX: Updated the error message to reflect the change to the 'GOOGLE_API_KEY' environment variable.
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'GOOGLE_API_KEY' está definida.");
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
     }
 
     // Creates a new instance on each call to ensure the most current key is used.
@@ -24,7 +22,7 @@ export const streamMessage = async (message: string) => {
     return result;
   } catch (error) {
     console.error("Error sending message to Gemini:", error);
-    throw new Error("Falha ao obter resposta da IA. Verifique sua chave de API e conexão com a internet.");
+    throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
 };
 
@@ -200,8 +198,7 @@ export const generateDocumentText = async (prompt: string): Promise<string> => {
     return fullText;
   } catch (error) {
     console.error("Error generating document text from Gemini:", error);
-    // Re-throw the error to be caught and displayed by the calling component.
-    throw error;
+    throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
 };
 
