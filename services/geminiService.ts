@@ -3,12 +3,12 @@ import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai"
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // FIX: Switched from Vite-specific 'import.meta.env.VITE_API_KEY' to 'process.env.API_KEY' to resolve the 'env' property error and align with project guidelines.
-    const key = process.env.API_KEY;
+    // FIX: Changed the environment variable for the API key to 'GOOGLE_API_KEY' as requested by the user.
+    const key = process.env.GOOGLE_API_KEY;
 
     if (!key) {
-        // FIX: Updated the error message to reflect the change to the 'API_KEY' environment variable.
-        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
+        // FIX: Updated the error message to reflect the change to the 'GOOGLE_API_KEY' environment variable.
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'GOOGLE_API_KEY' está definida.");
     }
 
     // Creates a new instance on each call to ensure the most current key is used.
@@ -164,7 +164,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
         };
         
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
                 responseMimeType: "application/json",
@@ -271,7 +271,7 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
         const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts: [{ text: prompt }, pdfPart] },
             config: {
                 responseMimeType: "application/json",
@@ -399,7 +399,7 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         
         const response = await aiInstance.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts: [ { text: prompt }, pdfPart ] },
             config: {
                 responseMimeType: "application/json",
