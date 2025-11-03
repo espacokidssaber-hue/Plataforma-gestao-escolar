@@ -165,7 +165,8 @@ const Declarations: React.FC = () => {
             setGeneratedText(result);
         } catch (error) {
             console.error(error);
-            setGeneratedText('Ocorreu um erro ao gerar o documento. Tente novamente.');
+            const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro desconhecido. Tente novamente.";
+            setGeneratedText(`Ocorreu um erro ao gerar o documento. Detalhes: ${errorMessage}`);
         } finally {
             setIsGenerating(false);
         }
@@ -205,31 +206,31 @@ const Declarations: React.FC = () => {
                             <div>
                                 <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aluno</label>
                                 <select id="student-select" value={selectedStudentId ?? ''} onChange={e => setSelectedStudentId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
-                                    <option value="">Selecione...</option>
+                                    <option value="">Selecione um aluno...</option>
                                     {MOCK_STUDENTS_LIST.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Declaração</label>
                                 <select id="template-select" value={selectedTemplateId ?? ''} onChange={e => setSelectedTemplateId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
-                                    <option value="">Selecione...</option>
+                                    <option value="">Selecione um tipo...</option>
                                     {declarationTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
-                                <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-teal-600 dark:text-teal-400 hover:underline mt-1">Gerenciar tipos</button>
+                                <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-blue-500 hover:underline mt-1">Gerenciar tipos</button>
                             </div>
                         </div>
                     </div>
                      <button onClick={handleGenerate} disabled={isGenerating || !selectedStudentId || !selectedTemplateId} className="w-full flex items-center justify-center px-4 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-500">
                         {isGenerating && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        {isGenerating ? 'Gerando...' : '2. Gerar Documento com IA'}
+                        {isGenerating ? 'Gerando...' : '2. Gerar Declaração com IA'}
                     </button>
                 </div>
 
                 {/* Coluna de Visualização */}
                 <div className="lg:col-span-2 bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização</h2>
-                        <button onClick={handlePrint} disabled={!generatedText} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização e Edição</h2>
+                        <button onClick={handlePrint} disabled={!generatedText || isGenerating} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
                             Imprimir
                         </button>
                     </div>
@@ -238,17 +239,22 @@ const Declarations: React.FC = () => {
                             value={generatedText}
                             onChange={e => setGeneratedText(e.target.value)}
                             className="w-full h-full bg-transparent text-gray-800 dark:text-gray-200 resize-none focus:outline-none"
-                            placeholder="O texto da declaração gerada aparecerá aqui..."
+                            placeholder="O texto da declaração gerada pela IA aparecerá aqui para sua revisão e edição..."
                         />
                     </div>
                 </div>
             </div>
-
-            {isManageTypesModalOpen && <ManageDeclarationTypesModal templates={declarationTemplates} onClose={() => setIsManageTypesModalOpen(false)} onSave={handleSaveTemplates} />}
             
             <div className="print-container">
                 {printContent && <PrintableDeclaration {...printContent} />}
             </div>
+            {isManageTypesModalOpen && (
+                <ManageDeclarationTypesModal 
+                    templates={declarationTemplates}
+                    onClose={() => setIsManageTypesModalOpen(false)}
+                    onSave={handleSaveTemplates}
+                />
+            )}
         </div>
     );
 };
