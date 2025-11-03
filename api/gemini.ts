@@ -1,5 +1,5 @@
 // api/gemini.ts
-import { GoogleGenAI, Part, GenerateContentRequest, Content } from "@google/genai";
+import { GoogleGenAI, Part, GenerateContentParameters, Content } from "@google/genai";
 
 // Esta função será executada no servidor da Vercel
 export async function POST(request: Request) {
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         contentsPayload = prompt;
     }
     
-    const payload: GenerateContentRequest = {
+    const payload: GenerateContentParameters = {
         model: model || 'gemini-2.5-flash',
         contents: contentsPayload,
         config: {},
