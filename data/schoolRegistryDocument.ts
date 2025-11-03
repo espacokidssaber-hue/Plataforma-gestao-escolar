@@ -28,8 +28,7 @@ const HighlightedContent: React.FC<{ children: React.ReactNode; highlight?: stri
         }
         return node;
     };
-
-    // FIX: Added missing return statement and closing brace for the HighlightedContent component.
+    
     return highlightText(children);
 };
 

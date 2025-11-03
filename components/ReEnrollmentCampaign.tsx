@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ReEnrollingStudent, ReEnrollmentStatus, DocumentStatus, SchoolUnit } from '../../types';
+import { ReEnrollingStudent, ReEnrollmentStatus, DocumentStatus, SchoolUnit } from '../types';
 import { streamMessage } from '../services/geminiService';
 import ReEnrollmentPortal from './ReEnrollmentPortal';
 import IndividualInviteModal from './IndividualInviteModal';

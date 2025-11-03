@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     // 3. Faz a chamada para a API do Gemini (do servidor para o Google)
     const stream = await ai.models.generateContentStream({
         model: "gemini-flash-lite-latest",
-        contents: [{role: "user", parts: [{text: prompt}]}],
+        contents: prompt,
     });
 
     // 4. Cria um fluxo de resposta para enviar de volta ao frontend em tempo real
