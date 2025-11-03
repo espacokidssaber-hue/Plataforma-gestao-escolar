@@ -3,8 +3,8 @@ import { GoogleGenAI } from "@google/genai";
 
 // Esta função será executada no servidor da Vercel
 export async function POST(request: Request) {
-  // 1. Pega o prompt enviado pelo frontend
-  const { prompt } = await request.json();
+  // 1. Pega o prompt e a flag de streaming enviados pelo frontend
+  const { prompt, stream } = await request.json();
 
   if (!prompt) {
     return new Response(JSON.stringify({ error: "O prompt é obrigatório." }), { status: 400 });
@@ -19,31 +19,48 @@ export async function POST(request: Request) {
     
     const ai = new GoogleGenAI({ apiKey });
 
-    // 3. Faz a chamada para a API do Gemini (do servidor para o Google)
-    const stream = await ai.models.generateContentStream({
-        model: "gemini-flash-lite-latest",
-        contents: prompt,
-    });
+    // 3. Decide entre streaming e resposta completa
+    if (stream) {
+      // 3a. Lida com a requisição de streaming
+      const streamResult = await ai.models.generateContentStream({
+          model: "gemini-flash-lite-latest",
+          contents: prompt,
+      });
 
-    // 4. Cria um fluxo de resposta para enviar de volta ao frontend em tempo real
-    const readableStream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        for await (const chunk of stream) {
-          const text = chunk.text;
-          if (text) {
-            // Envia cada pedaço de texto de volta para o navegador
-            controller.enqueue(encoder.encode(text));
+      // 4a. Cria um fluxo de resposta para enviar de volta ao frontend em tempo real
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          for await (const chunk of streamResult) {
+            const text = chunk.text;
+            if (text) {
+              // Envia cada pedaço de texto de volta para o navegador
+              controller.enqueue(encoder.encode(text));
+            }
           }
-        }
-        controller.close();
-      },
-    });
+          controller.close();
+        },
+      });
 
-    // 5. Retorna o fluxo como resposta para o frontend
-    return new Response(readableStream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    });
+      // 5a. Retorna o fluxo como resposta para o frontend
+      return new Response(readableStream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
+
+    } else {
+      // 3b. Lida com a requisição de texto completo
+      const result = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+      
+      const fullText = result.text;
+      
+      // 4b. Retorna o texto completo em um objeto JSON
+      return new Response(JSON.stringify({ text: fullText }), {
+          headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
   } catch (error) {
     console.error("Erro na rota da API Gemini:", error);

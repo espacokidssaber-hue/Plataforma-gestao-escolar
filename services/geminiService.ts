@@ -3,27 +3,25 @@ import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai"
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
 const getAiInstance = () => {
-    // This function remains for server-side or other direct calls, but is no longer used by streamMessage on the client.
+    // Esta função permanece para uso exclusivo no lado do servidor (backend), se necessário.
     const key = process.env.API_KEY;
 
     if (!key) {
         throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
     }
 
-    // Creates a new instance on each call to ensure the most current key is used.
     return new GoogleGenAI({ apiKey: key });
 }
 
 
 export const streamMessage = async (message: string) => {
   try {
-    // A chamada agora é para a NOSSA API, não para o Google diretamente
     const response = await fetch('/api/gemini', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt: message }),
+      body: JSON.stringify({ prompt: message, stream: true }),
     });
 
     if (!response.ok) {
@@ -31,12 +29,10 @@ export const streamMessage = async (message: string) => {
       throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
     }
     
-    // O corpo da resposta agora é um fluxo de texto puro
     if (!response.body) {
         throw new Error("A resposta da API não contém um corpo de fluxo.");
     }
 
-    // Retornamos o leitor do fluxo para o componente do chatbot processar
     return response.body.getReader();
 
   } catch (error) {
@@ -50,14 +46,40 @@ export const streamMessage = async (message: string) => {
 
 export const streamDocumentText = async (prompt: string) => {
   try {
-    const aiInstance = getAiInstance();
-    const response = await aiInstance.models.generateContentStream({
-       model: "gemini-2.5-flash",
-       contents: prompt,
+    const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, stream: true }),
     });
-    return response;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+    }
+    
+    if (!response.body) {
+        throw new Error("A resposta da API não contém um corpo de fluxo.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    
+    // Cria um AsyncGenerator para ser compatível com loops 'for await...of'
+    const stream = (async function* () {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        // Simula a estrutura de resposta do SDK original, que os componentes esperam
+        yield { text: decoder.decode(value) };
+      }
+    })();
+    
+    return stream as any;
+
   } catch (error) {
-    console.error("Error streaming text from Gemini:", error);
+    console.error("Error streaming text from Gemini via proxy:", error);
     throw new Error("Falha ao obter resposta da IA.");
   }
 };
@@ -206,20 +228,31 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 
 export const generateDocumentText = async (prompt: string): Promise<string> => {
   try {
-    const aiInstance = getAiInstance();
-    const response: GenerateContentResponse = await aiInstance.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt, stream: false }), // stream: false
     });
 
-    const fullText = response.text;
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    const fullText = result.text;
     
     if (!fullText || fullText.trim() === '') {
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
     }
     return fullText;
   } catch (error) {
-    console.error("Error generating document text from Gemini:", error);
+    console.error("Error generating document text from Gemini via proxy:", error);
+    if (error instanceof Error) {
+        throw new Error(`Falha ao se comunicar com o nosso servidor: ${error.message}`);
+    }
     throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
 };
