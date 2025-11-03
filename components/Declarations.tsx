@@ -112,7 +112,8 @@ const Declarations: React.FC = () => {
             setGeneratedText(result);
         } catch (error) {
             console.error(error);
-            setGeneratedText('Ocorreu um erro ao gerar o documento. Tente novamente.');
+            const errorMessage = `Ocorreu um erro ao gerar o documento. Tente novamente.\n\nDetalhes: ${error instanceof Error ? error.message : String(error)}`;
+            setGeneratedText(errorMessage);
         } finally {
             setIsGenerating(false);
         }

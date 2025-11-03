@@ -124,7 +124,7 @@ const BulkMessaging: React.FC = () => {
             const result = await generateDocumentText(fullPrompt);
             setContent(result);
         } catch (error) {
-            alert("Não foi possível gerar a mensagem. Tente novamente.");
+            alert(`Erro ao gerar mensagem: ${error instanceof Error ? error.message : "Tente novamente."}`);
         } finally {
             setIsGenerating(false);
         }

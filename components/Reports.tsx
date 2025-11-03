@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { streamDocumentText } from '../services/geminiService';
-import { useEnrollment } from '../contexts/EnrollmentContext';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
 
 // html2pdf is loaded globally from index.html
@@ -306,7 +306,8 @@ const Reports: React.FC = () => {
                 setAnalysis(prev => prev + (chunk.text || ''));
             }
         } catch (error) {
-            setAnalysis('**Erro ao Gerar Análise**\nOcorreu um erro ao comunicar com a IA. Por favor, tente novamente.');
+            const errorMessage = `**Erro ao Gerar Análise**\nOcorreu um erro ao comunicar com a IA. Por favor, tente novamente.\n\nDetalhes: ${error instanceof Error ? error.message : String(error)}`;
+            setAnalysis(errorMessage);
         } finally {
             setIsLoading(false);
         }

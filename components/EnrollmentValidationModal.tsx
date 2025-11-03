@@ -187,7 +187,7 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
             const result: { suggestedStatus: string, justification: string } = await generateJsonFromText(prompt, schema);
             setGeminiSuggestion(`Sugestão: Mover para "${result.suggestedStatus}". Motivo: ${result.justification}`);
         } catch (error) {
-            setGeminiSuggestion("Erro ao obter sugestão.");
+            setGeminiSuggestion(`Erro ao obter sugestão: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsSuggesting(false);
         }

@@ -42,7 +42,7 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
             const result = await generateDocumentText(prompt);
             setMessage(result);
         } catch (error) {
-            alert("Erro ao gerar mensagem.");
+            alert(`Erro ao gerar mensagem: ${error instanceof Error ? error.message : "Tente novamente."}`);
         } finally {
             setIsGenerating(false);
         }

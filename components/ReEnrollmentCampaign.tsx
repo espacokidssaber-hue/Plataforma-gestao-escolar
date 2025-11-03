@@ -75,7 +75,7 @@ const ReEnrollmentCampaign: React.FC = () => {
             }
         } catch (error) {
             console.error(error);
-            alert("Erro ao gerar texto com IA.");
+            alert(`Erro ao gerar texto com IA: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsGeneratingText(false);
         }
