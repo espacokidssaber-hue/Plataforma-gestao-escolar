@@ -2,44 +2,55 @@
 import { GoogleGenAI, Chat, Type, GenerateContentResponse } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
-const getAiInstance = (): GoogleGenAI | null => {
+const getAiInstance = () => {
+    // This function remains for server-side or other direct calls, but is no longer used by streamMessage on the client.
     const key = process.env.API_KEY;
 
     if (!key) {
-        console.error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
-        return null;
+        throw new Error("A chave de API do Gemini não foi configurada. Verifique se a variável de ambiente 'API_KEY' está definida.");
     }
 
     // Creates a new instance on each call to ensure the most current key is used.
     return new GoogleGenAI({ apiKey: key });
 }
 
-const handleMissingAI = () => {
-    throw new Error("O serviço de IA não está configurado corretamente. A funcionalidade está indisponível.");
-};
-
 
 export const streamMessage = async (message: string) => {
-  const aiInstance = getAiInstance();
-  if (!aiInstance) {
-      handleMissingAI();
-  }
   try {
-    const chat = aiInstance.chats.create({ model: 'gemini-flash-lite-latest' });
-    const result = await chat.sendMessageStream({ message });
-    return result;
+    // A chamada agora é para a NOSSA API, não para o Google diretamente
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt: message }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+    }
+    
+    // O corpo da resposta agora é um fluxo de texto puro
+    if (!response.body) {
+        throw new Error("A resposta da API não contém um corpo de fluxo.");
+    }
+
+    // Retornamos o leitor do fluxo para o componente do chatbot processar
+    return response.body.getReader();
+
   } catch (error) {
-    console.error("Error sending message to Gemini:", error);
-    throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
+    console.error("Erro ao chamar a rota /api/gemini:", error);
+    if (error instanceof Error) {
+        throw new Error(`Falha ao se comunicar com o nosso servidor: ${error.message}`);
+    }
+    throw new Error("Falha ao se comunicar com o nosso servidor. Por favor, tente novamente mais tarde.");
   }
 };
 
 export const streamDocumentText = async (prompt: string) => {
-  const aiInstance = getAiInstance();
-  if (!aiInstance) {
-      handleMissingAI();
-  }
   try {
+    const aiInstance = getAiInstance();
     const response = await aiInstance.models.generateContentStream({
        model: "gemini-2.5-flash",
        contents: prompt,
@@ -53,11 +64,8 @@ export const streamDocumentText = async (prompt: string) => {
 
 
 export const generateJsonFromText = async (prompt: string, schema: any) => {
-  const aiInstance = getAiInstance();
-  if (!aiInstance) {
-      handleMissingAI();
-  }
   try {
+    const aiInstance = getAiInstance();
     const response = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -97,14 +105,10 @@ export interface ExtractedStudent {
 }
 
 export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise<ExtractedStudent[]> => {
-    const aiInstance = getAiInstance();
-    if (!aiInstance) {
-        handleMissingAI();
-    }
     const prompt = `
         **Objetivo Principal: Extrair TODOS os alunos de um relatório de matrículas em PDF.**
 
-        Sua tarefa mais importante é analisar o documento PDF e extrair CADA ALUNO listado. **É CRÍTICO que nenhum aluno seja ignorado**, mesmo que algumas informações estejam faltando na linha dele.
+        Sua tarefa mais importante é analisar o documento PDF e extrair CADA ALUNO listado. **É CRÍTICO que nenhum aluno seja ignorado**, mesmo que algumas informações estejam faltando na linha dele. Se o documento for ilegível, uma imagem ou não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
 
         **Instruções de Extração:**
         1.  **Não Pule Alunos:** Processe todas as linhas que parecem ser um registro de aluno.
@@ -171,6 +175,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = {
             inlineData: {
                 mimeType: 'application/pdf',
@@ -200,11 +205,8 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 
 
 export const generateDocumentText = async (prompt: string): Promise<string> => {
-  const aiInstance = getAiInstance();
-  if (!aiInstance) {
-      handleMissingAI();
-  }
   try {
+    const aiInstance = getAiInstance();
     const response: GenerateContentResponse = await aiInstance.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -223,10 +225,6 @@ export const generateDocumentText = async (prompt: string): Promise<string> => {
 };
 
 export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerator<GenerateContentResponse>> => {
-    const aiInstance = getAiInstance();
-    if (!aiInstance) {
-        handleMissingAI();
-    }
     const prompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído.`;
     const pdfPart = {
         inlineData: {
@@ -235,6 +233,7 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
         },
     };
     try {
+        const aiInstance = getAiInstance();
         const response = await aiInstance.models.generateContentStream({
             model: 'gemini-2.5-flash', // Switched to a faster model
             contents: { parts: [{ text: prompt }, pdfPart] },
@@ -248,10 +247,6 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
 
 
 export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{ year: number, month: number, events: EventData[] }[]> => {
-    const aiInstance = getAiInstance();
-    if (!aiInstance) {
-        handleMissingAI();
-    }
     const prompt = `
       Você é um assistente de secretaria escolar altamente preciso e meticuloso. Sua tarefa é analisar o calendário escolar em PDF fornecido e extrair CADA evento, sem deixar NENHUM de fora.
 
@@ -262,6 +257,7 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
       4.  **Intervalos de Datas:** Para intervalos (ex: 'Recesso de 01 a 15/07' ou 'Provas: 28/Jan a 02/Fev'), você **DEVE** criar uma entrada para **CADA DIA INDIVIDUALMENTE**, mesmo que o intervalo atravesse meses ou anos. Por exemplo, "Recesso de 23/12/2025 a 02/01/2026" deve gerar eventos diários do dia 23/12 até o dia 02/01.
       5.  **Filtro de Ruído:** Ignore textos irrelevantes como cabeçalhos, rodapés ou anotações genéricas que não representem um evento datado.
       6.  **Revisão Final:** Antes de finalizar, revise sua extração para garantir que **ABSOLUTAMENTE NENHUM** evento foi omitido.
+      7.  **Falha Graciosa:** Se o documento PDF for ilegível, não for um calendário ou não contiver nenhum evento, retorne um array JSON vazio: \`[]\`.
 
       **Formato de Saída:**
       Retorne um array de objetos JSON, onde cada objeto representa um mês. Siga o schema fornecido de forma estrita. Mapeie os eventos para os seguintes tipos: 'exam' (provas, avaliações), 'holiday' (feriados), 'event' (festas, eventos gerais), 'other' (conselho de classe, reuniões, recesso).
@@ -292,6 +288,7 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         const response = await aiInstance.models.generateContent({
             model: 'gemini-2.5-pro',
@@ -385,10 +382,6 @@ export interface ExtractedGrade {
 }
 
 export const extractGradesFromPdf = async (pdfBase64: string, studentName: string): Promise<ExtractedGrade[]> => {
-    const aiInstance = getAiInstance();
-    if (!aiInstance) {
-        handleMissingAI();
-    }
     const prompt = `
         Analise o documento PDF fornecido, que é um boletim escolar do aluno(a) ${studentName}.
         Para cada disciplina listada no boletim, extraia CADA avaliação (como "Prova 1", "Trabalho", "Média 1º Bimestre", "Nota Final", etc.) e sua respectiva nota numérica.
@@ -399,6 +392,7 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
         3.  **Notas Numéricas:** Converta todas as notas para formato numérico (ex: 7,5 deve ser 7.5). Se uma nota não for numérica (ex: "C" para "compareceu"), ignore-a.
         4.  **Ignorar Faltas e Frequência:** Não extraia informações de faltas ou frequência, apenas nomes de avaliações e notas.
         5.  **Estrutura de Saída:** Retorne os dados como um array de objetos JSON, seguindo estritamente o schema. Cada objeto deve representar uma única nota de uma avaliação específica. Não agrupe as notas por disciplina no JSON final; crie um objeto para cada par avaliação/nota.
+        6.  **Falha Graciosa:** Se o documento for ilegível, não parecer um boletim ou não contiver nenhuma nota, retorne um array JSON vazio: \`[]\`.
 
         **Exemplo de Saída Esperada:**
         [
@@ -422,6 +416,7 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
     };
     
     try {
+        const aiInstance = getAiInstance();
         const pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } };
         
         const response = await aiInstance.models.generateContent({

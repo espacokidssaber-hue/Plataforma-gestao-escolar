@@ -43,11 +43,16 @@ const StudentSummaryModal: React.FC<StudentSummaryModalProps> = ({ student, subj
         `;
 
         try {
-            const stream = await streamMessage(prompt);
-            let fullText = '';
-            for await (const chunk of stream) {
-                fullText += chunk.text;
-                setSummary(fullText);
+            const reader = await streamMessage(prompt);
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+                const chunkText = decoder.decode(value);
+                setSummary(prev => prev + chunkText);
             }
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : 'Ocorreu um erro desconhecido.';

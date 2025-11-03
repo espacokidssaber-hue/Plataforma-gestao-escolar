@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ReEnrollingStudent, ReEnrollmentStatus, DocumentStatus, SchoolUnit } from '../types';
+import { ReEnrollingStudent, ReEnrollmentStatus, DocumentStatus, SchoolUnit } from '../../types';
 import { streamMessage } from '../services/geminiService';
 import ReEnrollmentPortal from './ReEnrollmentPortal';
 import IndividualInviteModal from './IndividualInviteModal';
@@ -59,13 +59,19 @@ const ReEnrollmentCampaign: React.FC = () => {
 
     const handleGenerateText = async () => {
         setIsGeneratingText(true);
+        setCampaignText('');
         const prompt = "Escreva um texto caloroso e profissional para os pais sobre o início da campanha de pré-matrícula da escola. Mencione que o processo é online, incluindo validação de dados, envio de documentos e pagamento.";
         try {
-            const stream = await streamMessage(prompt);
-            let fullText = '';
-            for await (const chunk of stream) {
-                fullText += chunk.text;
-                setCampaignText(fullText);
+            const reader = await streamMessage(prompt);
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+                const chunkText = decoder.decode(value);
+                setCampaignText(prev => prev + chunkText);
             }
         } catch (error) {
             console.error(error);

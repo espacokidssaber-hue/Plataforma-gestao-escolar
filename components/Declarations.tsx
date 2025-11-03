@@ -4,61 +4,7 @@ import { generateDocumentText } from '../services/geminiService';
 import PrintableDeclaration from './declarations/PrintableDeclaration';
 import ManageDeclarationTypesModal from './declarations/ManageDeclarationTypesModal';
 import { useSchoolInfo } from '../App';
-
-// --- AVATAR UTILS START ---
-const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
-const stringToColor = (str: string): string => { let hash = 0; if (!str) return '#cccccc'; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); hash = hash & hash; } let color = '#'; for (let i = 0; i < 3; i++) { const value = (hash >> (i * 8)) & 0xFF; const adjustedValue = 100 + (value % 156); color += ('00' + adjustedValue.toString(16)).substr(-2); } return color; };
-const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
-// --- AVATAR UTILS END ---
-
-// FIX: Add missing 'unit' property to MOCK_STUDENTS_LIST items to conform to the EnrolledStudent type.
-const MOCK_STUDENTS_LIST: EnrolledStudent[] = [
-    { 
-        id: 301, 
-        name: 'Alice Braga', 
-        avatar: generateAvatar('Alice Braga'), 
-        grade: 'Infantil II', 
-        className: 'Infantil II A', 
-        classId: 1, 
-        unit: SchoolUnit.MATRIZ, 
-        status: StudentLifecycleStatus.ACTIVE, 
-        financialStatus: 'OK', 
-        libraryStatus: 'OK', 
-        academicDocsStatus: 'OK',
-        guardians: [{ name: 'Fernanda Braga', cpf: '111.222.333-44', rg: '', phone: '', email: '' }],
-        address: { street: 'Rua das Flores', number: '123', neighborhood: 'Centro', city: 'João Pessoa', state: 'PB', zip: '58000-000' }
-    },
-    { 
-        id: 302, 
-        name: 'Bento Ribeiro', 
-        avatar: generateAvatar('Bento Ribeiro'), 
-        grade: '1º Ano', 
-        className: '1º Ano A', 
-        classId: 2, 
-        unit: SchoolUnit.MATRIZ, 
-        status: StudentLifecycleStatus.ACTIVE, 
-        financialStatus: 'Pendente', 
-        libraryStatus: 'OK', 
-        academicDocsStatus: 'OK',
-        guardians: [{ name: 'Ricardo Ribeiro', cpf: '222.333.444-55', rg: '', phone: '', email: '' }],
-        address: { street: 'Avenida das Árvores', number: '456', neighborhood: 'Bessa', city: 'João Pessoa', state: 'PB', zip: '58111-000' }
-    },
-    { 
-        id: 303, 
-        name: 'Clara Nunes', 
-        avatar: generateAvatar('Clara Nunes'), 
-        grade: '2º Ano', 
-        className: '2º Ano B', 
-        classId: 3, 
-        unit: SchoolUnit.FILIAL, 
-        status: StudentLifecycleStatus.ACTIVE, 
-        financialStatus: 'OK', 
-        libraryStatus: 'Pendente', 
-        academicDocsStatus: 'OK',
-        guardians: [{ name: 'Mariana Nunes', cpf: '333.444.555-66', rg: '', phone: '', email: '' }],
-        address: { street: 'Travessa dos Pássaros', number: '789', neighborhood: 'Manaíra', city: 'João Pessoa', state: 'PB', zip: '58222-000' }
-    },
-];
+import { useEnrollment } from '../contexts/EnrollmentContext';
 
 const INITIAL_TEMPLATES: DeclarationTemplate[] = [
     { id: 1, name: 'Declaração de Matrícula' },
@@ -71,6 +17,7 @@ const INITIAL_TEMPLATES: DeclarationTemplate[] = [
 
 const Declarations: React.FC = () => {
     const { schoolInfo, matrizInfo } = useSchoolInfo();
+    const { enrolledStudents } = useEnrollment();
 
     const [declarationTemplates, setDeclarationTemplates] = useState<DeclarationTemplate[]>(() => {
         const savedTemplates = localStorage.getItem('declarationTemplates');
@@ -121,7 +68,7 @@ const Declarations: React.FC = () => {
             alert('Por favor, selecione um aluno e um tipo de declaração.');
             return;
         }
-        const student = MOCK_STUDENTS_LIST.find(s => s.id === selectedStudentId);
+        const student = enrolledStudents.find(s => s.id === selectedStudentId);
         if (!student) return;
 
         setIsGenerating(true);
@@ -165,15 +112,14 @@ const Declarations: React.FC = () => {
             setGeneratedText(result);
         } catch (error) {
             console.error(error);
-            const errorMessage = error instanceof Error ? error.message : "Ocorreu um erro desconhecido. Tente novamente.";
-            setGeneratedText(`Ocorreu um erro ao gerar o documento. Detalhes: ${errorMessage}`);
+            setGeneratedText('Ocorreu um erro ao gerar o documento. Tente novamente.');
         } finally {
             setIsGenerating(false);
         }
     };
     
     const handlePrint = () => {
-        const student = MOCK_STUDENTS_LIST.find(s => s.id === selectedStudentId);
+        const student = enrolledStudents.find(s => s.id === selectedStudentId);
         const selectedTemplate = declarationTemplates.find(t => t.id === selectedTemplateId);
         if (generatedText && student && selectedTemplate) {
             const infoForPrint = getInfoForStudent(student);
@@ -207,30 +153,30 @@ const Declarations: React.FC = () => {
                                 <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aluno</label>
                                 <select id="student-select" value={selectedStudentId ?? ''} onChange={e => setSelectedStudentId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
                                     <option value="">Selecione um aluno...</option>
-                                    {MOCK_STUDENTS_LIST.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    {enrolledStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Declaração</label>
                                 <select id="template-select" value={selectedTemplateId ?? ''} onChange={e => setSelectedTemplateId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
-                                    <option value="">Selecione um tipo...</option>
+                                    <option value="">Selecione...</option>
                                     {declarationTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
-                                <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-blue-500 hover:underline mt-1">Gerenciar tipos</button>
+                                <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-teal-600 dark:text-teal-400 hover:underline mt-1">Gerenciar tipos</button>
                             </div>
                         </div>
                     </div>
                      <button onClick={handleGenerate} disabled={isGenerating || !selectedStudentId || !selectedTemplateId} className="w-full flex items-center justify-center px-4 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-500">
                         {isGenerating && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        {isGenerating ? 'Gerando...' : '2. Gerar Declaração com IA'}
+                        {isGenerating ? 'Gerando...' : '2. Gerar Documento com IA'}
                     </button>
                 </div>
 
                 {/* Coluna de Visualização */}
                 <div className="lg:col-span-2 bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização e Edição</h2>
-                        <button onClick={handlePrint} disabled={!generatedText || isGenerating} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização</h2>
+                        <button onClick={handlePrint} disabled={!generatedText} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
                             Imprimir
                         </button>
                     </div>
@@ -239,22 +185,17 @@ const Declarations: React.FC = () => {
                             value={generatedText}
                             onChange={e => setGeneratedText(e.target.value)}
                             className="w-full h-full bg-transparent text-gray-800 dark:text-gray-200 resize-none focus:outline-none"
-                            placeholder="O texto da declaração gerada pela IA aparecerá aqui para sua revisão e edição..."
+                            placeholder="O texto da declaração gerada aparecerá aqui..."
                         />
                     </div>
                 </div>
             </div>
+
+            {isManageTypesModalOpen && <ManageDeclarationTypesModal templates={declarationTemplates} onClose={() => setIsManageTypesModalOpen(false)} onSave={handleSaveTemplates} />}
             
             <div className="print-container">
                 {printContent && <PrintableDeclaration {...printContent} />}
             </div>
-            {isManageTypesModalOpen && (
-                <ManageDeclarationTypesModal 
-                    templates={declarationTemplates}
-                    onClose={() => setIsManageTypesModalOpen(false)}
-                    onSave={handleSaveTemplates}
-                />
-            )}
         </div>
     );
 };

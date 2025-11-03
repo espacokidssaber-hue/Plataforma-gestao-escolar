@@ -29,12 +29,21 @@ const Chatbot: React.FC<ChatbotProps> = ({ onClose }) => {
     setMessages(prevMessages => [...prevMessages, userMessage]);
 
     try {
-      const stream = await streamMessage(prompt);
+      // streamMessage agora retorna um leitor (ReadableStreamDefaultReader)
+      const reader = await streamMessage(prompt);
       
       setMessages(prev => [...prev, { role: MessageRole.MODEL, content: '' }]);
 
-      for await (const chunk of stream) {
-        const chunkText = chunk.text;
+      const decoder = new TextDecoder();
+
+      // Loop para ler o stream
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break; // O stream terminou
+        }
+        
+        const chunkText = decoder.decode(value);
         setMessages(prev => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
