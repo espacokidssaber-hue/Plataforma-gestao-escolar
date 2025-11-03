@@ -177,7 +177,7 @@ export interface ManualEnrollmentData {
     studentAddress: StudentAddress;
     guardian: Guardian;
     healthInfo: HealthInfo;
-    documents: { name: string; deliveryMethod: DocumentDeliveryMethod }[];
+    documents: { name: string; deliveryMethod: DocumentDeliveryMethod; status: DocumentStatus }[];
     paymentConfirmed: boolean;
     paymentMethod?: 'PIX' | 'Dinheiro' | 'Cartão';
     discountProgram: string;

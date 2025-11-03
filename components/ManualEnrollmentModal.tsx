@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ManualEnrollmentData, Guardian, HealthInfo, DocumentDeliveryMethod, StudentAddress } from '../types';
+import { ManualEnrollmentData, Guardian, HealthInfo, DocumentDeliveryMethod, StudentAddress, DocumentStatus } from '../types';
 import { BRAZILIAN_STATES } from '../data/brazilianLocations';
 
 interface ManualEnrollmentModalProps {
@@ -32,7 +32,7 @@ const ManualEnrollmentModal: React.FC<ManualEnrollmentModalProps> = ({ onClose, 
   const [address, setAddress] = useState<Partial<StudentAddress>>({});
   const [guardian, setGuardian] = useState<Partial<Guardian>>({});
   const [healthInfo, setHealthInfo] = useState<HealthInfo>({ allergies: '', medications: '', emergencyContactName: '', emergencyContactPhone: '' });
-  const [documents, setDocuments] = useState<Record<string, DocumentDeliveryMethod>>({});
+  const [documents, setDocuments] = useState<Record<string, { deliveryMethod: DocumentDeliveryMethod; status: DocumentStatus }>>({});
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'Dinheiro' | 'Cartão'>('PIX');
   const [discountProgram, setDiscountProgram] = useState('Nenhum');
@@ -88,8 +88,17 @@ const ManualEnrollmentModal: React.FC<ManualEnrollmentModalProps> = ({ onClose, 
     setHealthInfo(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDocumentChange = (docName: string, method: DocumentDeliveryMethod) => {
-    setDocuments(prev => ({ ...prev, [docName]: method }));
+  const handleDocumentChange = (docName: string, field: 'deliveryMethod' | 'status', value: string) => {
+    setDocuments(prev => {
+        const currentDoc = prev[docName] || { deliveryMethod: 'Pendente', status: DocumentStatus.PENDING };
+        return {
+            ...prev,
+            [docName]: {
+                ...currentDoc,
+                [field]: value
+            }
+        };
+    });
   };
   
   const fetchCep = async () => {
@@ -117,8 +126,14 @@ const ManualEnrollmentModal: React.FC<ManualEnrollmentModalProps> = ({ onClose, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // FIX: Explicitly cast `deliveryMethod` to `DocumentDeliveryMethod` to resolve TypeScript error where it was inferred as `unknown`.
-    const formattedDocs = Object.entries(documents).map(([name, deliveryMethod]) => ({ name, deliveryMethod: deliveryMethod as DocumentDeliveryMethod }));
+    const formattedDocs = ALL_DOCUMENTS.map(docName => {
+        const docInfo = documents[docName] || { deliveryMethod: 'Pendente', status: DocumentStatus.PENDING };
+        return {
+            name: docName,
+            deliveryMethod: docInfo.deliveryMethod,
+            status: docInfo.status
+        };
+    });
 
     const data: ManualEnrollmentData = {
         studentName: student.name,
@@ -285,15 +300,25 @@ const ManualEnrollmentModal: React.FC<ManualEnrollmentModalProps> = ({ onClose, 
              {/* Documents */}
             <section className="p-4 border border-gray-200 dark:border-gray-700/50 rounded-lg">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Documentos</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
-                    {ALL_DOCUMENTS.map(docName => (
-                        <div key={docName}>
-                            <label className="text-sm">{docName}</label>
-                            <select value={documents[docName] || 'Pendente'} onChange={e => handleDocumentChange(docName, e.target.value as DocumentDeliveryMethod)} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-xs">
-                                <option>Pendente</option><option>Digital</option><option>Físico</option>
-                            </select>
-                        </div>
-                    ))}
+                <div className="grid grid-cols-1 gap-y-2">
+                    {ALL_DOCUMENTS.map(docName => {
+                        const docInfo = documents[docName] || { deliveryMethod: 'Pendente', status: DocumentStatus.PENDING };
+                        return (
+                            <div key={docName} className="grid grid-cols-3 gap-2 items-center">
+                                <label className="text-sm col-span-1">{docName}</label>
+                                <div className="col-span-2 flex space-x-2">
+                                    <select value={docInfo.deliveryMethod} onChange={e => handleDocumentChange(docName, 'deliveryMethod', e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-xs">
+                                        <option>Pendente</option>
+                                        <option>Digital</option>
+                                        <option>Físico</option>
+                                    </select>
+                                    <select value={docInfo.status} onChange={e => handleDocumentChange(docName, 'status', e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-xs">
+                                        {Object.values(DocumentStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
         </main>

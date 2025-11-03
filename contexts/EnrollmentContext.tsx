@@ -209,13 +209,33 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
     };
 
     const addManualApplicant = (data: ManualEnrollmentData) => {
+         const allDocsApproved = data.documents.every(d => d.status === DocumentStatus.APPROVED);
+         const hasRejectedDocs = data.documents.some(d => d.status === DocumentStatus.REJECTED);
+
+         let applicantStatus: NewEnrollmentStatus;
+
+         if (hasRejectedDocs) {
+             applicantStatus = NewEnrollmentStatus.INCORRECT_DOCUMENTATION;
+         } else if (allDocsApproved && data.paymentConfirmed) {
+             applicantStatus = NewEnrollmentStatus.READY_TO_FINALIZE;
+         } else if (allDocsApproved && !data.paymentConfirmed) {
+             applicantStatus = NewEnrollmentStatus.AWAITING_PAYMENT;
+         } else {
+             applicantStatus = NewEnrollmentStatus.PENDING_ANALYSIS;
+         }
+
          const newApplicant: Applicant = {
             id: Date.now(),
             name: data.studentName,
             avatar: generateAvatar(data.studentName),
             submissionDate: new Date().toISOString(),
-            status: NewEnrollmentStatus.PENDING_ANALYSIS,
-            documents: data.documents.map(d => ({ ...d, status: DocumentStatus.ANALYSIS, fileUrl: '#' })),
+            status: applicantStatus,
+            documents: data.documents.map(d => ({
+                name: d.name,
+                status: d.status,
+                deliveryMethod: d.deliveryMethod,
+                fileUrl: (d.deliveryMethod === 'Físico' || d.deliveryMethod === 'Digital') ? '#' : undefined,
+            })),
             guardians: [data.guardian],
             healthInfo: data.healthInfo,
             dataValidated: true,
