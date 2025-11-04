@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DOCUMENT_SECTIONS } from '../data/schoolRegistryDocument';
+import { DOCUMENT_SECTIONS } from '../../data/schoolRegistryDocument';
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;
