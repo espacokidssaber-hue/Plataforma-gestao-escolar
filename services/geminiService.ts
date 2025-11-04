@@ -203,8 +203,8 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 
     } catch (error) {
         console.error("Erro na extração de alunos do PDF:", error);
-        // Nova mensagem de erro, mais genérica e útil para o usuário
-        throw new Error("A IA falhou ao processar o arquivo PDF. Verifique se o arquivo não está corrompido, se contém texto legível e tente novamente.");
+        // Se a análise do JSON falhar, significa que a IA conseguiu ler, mas não conseguiu estruturar os dados.
+        throw new Error("A IA leu o PDF, mas falhou ao organizar os dados dos alunos.\nVerifique a estrutura do documento.");
     }
 };
 
