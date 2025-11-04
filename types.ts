@@ -253,6 +253,7 @@ export interface EnrolledStudent {
   address?: StudentAddress;
   enrollmentFee?: number;
   monthlyFee?: number;
+  discountProgram?: string;
   originClassName?: string;
   originClassTurma?: string;
   imageUsagePermission?: boolean;

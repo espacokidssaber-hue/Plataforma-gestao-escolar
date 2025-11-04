@@ -1,17 +1,18 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { UserRole } from '../types';
+import { UserRole, SchoolUnit } from '../types';
 
 export interface User {
     id: number;
     username: string;
     role: UserRole;
+    unit?: SchoolUnit;
 }
 
 // ==================================================================================
 // AUTH DATA VERSIONING AND MIGRATION
 // ==================================================================================
 
-const CURRENT_AUTH_VERSION = "1.1.0";
+const CURRENT_AUTH_VERSION = "1.2.0"; // Version bump for unit property
 
 const migrateAuthData = () => {
     // Check for very old, unversioned data and migrate it first
@@ -19,18 +20,20 @@ const migrateAuthData = () => {
     const legacyPasswordKey = 'app_passwords';
     
     if (localStorage.getItem(legacyUserKey)) {
-        console.log("Legacy auth data found. Migrating to version 1.1.0...");
+        console.log("Legacy auth data found. Migrating to version 1.2.0...");
         const users = JSON.parse(localStorage.getItem(legacyUserKey) || '[]');
         const passwords = JSON.parse(localStorage.getItem(legacyPasswordKey) || '{}');
         
         const initialData = {
-            users: users.length > 0 ? users : [
+            users: users.length > 0 ? users.map((u: any) => ({...u, unit: u.role === 'secretary' ? SchoolUnit.MATRIZ : undefined})) : [
                 { id: 1000, username: 'admin', role: 'admin' as UserRole },
-                { id: 1001, username: 'secretaria', role: 'secretary' as UserRole },
+                { id: 1001, username: 'secretaria_matriz', role: 'secretary' as UserRole, unit: SchoolUnit.MATRIZ },
+                { id: 1002, username: 'secretaria_filial', role: 'secretary' as UserRole, unit: SchoolUnit.FILIAL },
             ],
             passwords: Object.keys(passwords).length > 0 ? passwords : {
                 admin: '123',
-                secretaria: '123',
+                secretaria_matriz: '123',
+                secretaria_filial: '123'
             }
         };
 
@@ -55,8 +58,14 @@ const migrateAuthData = () => {
                 return storedData.data;
             } else {
                  console.warn(`Auth data version mismatch. Found ${storedData.version}, expected ${CURRENT_AUTH_VERSION}. Applying migrations...`);
-                 // Future migration logic would go here. For now, we just use the data as is.
-                 return storedData.data;
+                 // Future migration logic would go here. For now, we just use the data as is, adding unit to secretaries if missing.
+                 const migratedUsers = storedData.data.users.map((u: User) => {
+                    if (u.role === 'secretary' && !u.unit) {
+                        return {...u, unit: SchoolUnit.MATRIZ }; // Default to Matriz if unit is missing
+                    }
+                    return u;
+                 });
+                 return { ...storedData.data, users: migratedUsers };
             }
         } catch (e) {
             console.error("Failed to parse auth_data from localStorage, resetting to default.", e);
@@ -67,11 +76,13 @@ const migrateAuthData = () => {
     return {
         users: [
             { id: 1000, username: 'admin', role: 'admin' as UserRole },
-            { id: 1001, username: 'secretaria', role: 'secretary' as UserRole },
+            { id: 1001, username: 'secretaria_matriz', role: 'secretary' as UserRole, unit: SchoolUnit.MATRIZ },
+            { id: 1002, username: 'secretaria_filial', role: 'secretary' as UserRole, unit: SchoolUnit.FILIAL },
         ],
         passwords: {
             admin: '123',
-            secretaria: '123',
+            secretaria_matriz: '123',
+            secretaria_filial: '123'
         },
     };
 };

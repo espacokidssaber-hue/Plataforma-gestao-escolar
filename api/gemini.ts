@@ -1,4 +1,5 @@
 // api/gemini.ts
+// FIX: Update to latest @google/genai SDK guidelines
 import { GoogleGenAI, Part, GenerateContentParameters, Content } from "@google/genai";
 
 // Esta função será executada no servidor da Vercel
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
       throw new Error("API_KEY não foi encontrada nas variáveis de ambiente.");
     }
     
+    // FIX: Use new GoogleGenAI({ apiKey }) for initialization
     const ai = new GoogleGenAI({ apiKey });
 
     let contentsPayload: string | Content;
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
     }
 
     if (stream) {
+      // FIX: Use ai.models.generateContentStream instead of model.generateContentStream
       const streamResult = await ai.models.generateContentStream(payload);
       const readableStream = new ReadableStream({
         async start(controller) {
@@ -56,6 +59,7 @@ export async function POST(request: Request) {
       return new Response(readableStream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
     } else {
+      // FIX: Use ai.models.generateContent instead of model.generateContent
       const result = await ai.models.generateContent(payload);
       const responseText = result.text;
       

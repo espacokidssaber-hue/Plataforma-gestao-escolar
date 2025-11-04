@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DOCUMENT_SECTIONS } from '../../data/schoolRegistryDocument';
+import { DOCUMENT_SECTIONS } from '../data/schoolRegistryDocument';
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;
@@ -161,9 +161,7 @@ const Archive: React.FC = () => {
                                     </div>
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white hidden print:block !mt-0">{section.title}</h2>
                                     <div className="mt-4 text-gray-700 dark:text-gray-300">
-                                         {React.isValidElement(section.content)
-                                            ? React.cloneElement(section.content as React.ReactElement<{ highlight?: string }>, { highlight: searchTerm })
-                                            : section.content}
+                                         {React.isValidElement(section.content) ? React.cloneElement(section.content as React.ReactElement<{ highlight?: string }>, { highlight: searchTerm }) : section.content}
                                     </div>
                                 </section>
                             ))

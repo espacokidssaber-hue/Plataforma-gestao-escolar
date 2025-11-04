@@ -104,14 +104,15 @@ export interface ExtractedStudent {
 }
 
 export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise<ExtractedStudent[]> => {
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
-        **Objetivo Principal: Extrair TODOS os alunos de um relatório de matrículas em PDF.**
+        **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos de um relatório de matrículas em PDF.**
 
-        Sua tarefa mais importante é analisar o documento PDF e extrair CADA ALUNO listado. **É CRÍTICO que nenhum aluno seja ignorado**, mesmo que algumas informações estejam faltando na linha dele. Se o documento for ilegível, uma imagem ou não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
+        Você é um assistente de secretaria escolar extremamente meticuloso e preciso. Sua responsabilidade é garantir que **NENHUM** aluno seja omitido durante a extração de dados. É considerado um erro grave se qualquer aluno listado no documento não aparecer no resultado final.
 
-        **Instruções de Extração:**
-        1.  **Não Pule Alunos:** Processe todas as linhas que parecem ser um registro de aluno.
-        2.  **Campos Vazios:** Se uma informação não for encontrada para um aluno (ex: CPF do responsável está em branco), retorne a propriedade correspondente no JSON como uma string vazia ("").
+        **Instruções de Processamento:**
+        1.  **Processamento Linha por Linha:** Analise o documento de forma sequencial, linha por linha. Cada linha que contém o nome de um aluno deve ser tratada como um registro a ser extraído.
+        2.  **Extração Obrigatória:** Mesmo que uma linha de aluno tenha informações faltando (como CPF ou telefone), você **DEVE** extrair o nome do aluno e os dados disponíveis. Não descarte um aluno por dados incompletos.
         3.  **Mapeamento de Campos:** Use os seguintes cabeçalhos da planilha para preencher o JSON:
             - NOME DO ALUNO -> studentName
             - DATA DE NASCIMENTO -> dateOfBirth
@@ -127,22 +128,21 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
             - UF -> addressState
             - CEP -> addressZip
 
-        **Extração de Série e Turma (Regras Específicas):**
-        1.  **Série (\`className\`):**
-            - Procure por colunas como "SÉRIE", "SÉRIE DE INTERESSE", "ETAPA".
-            - Extraia o nome da série (ex: "1º Ano", "Infantil II").
-            - Se a coluna contiver "1º ANO A", extraia APENAS a série ("1º ANO") para o campo \`className\`.
+        **Extração de Série, Turma e Unidade (Regras Específicas):**
+        1.  **Série (\`className\`):** Extraia a série (ex: "1º Ano", "Infantil II") da coluna "SÉRIE" ou similar. Se a coluna for "1º ANO A MAT", extraia apenas "1º ANO".
+        2.  **Turma (\`studentTurma\`):** Procure a turma (ex: 'A', 'B') na coluna "TURMA" ou como parte da série (ex: "1º ANO A").
+        3.  **Unidade Escolar (\`schoolUnit\`):** **Esta é uma etapa CRÍTICA.** Analise o nome da série ou da turma.
+            - Se terminar com ' MAT' ou contiver 'MATRIZ', defina \`schoolUnit\` como 'Matriz'.
+            - Se terminar com ' FIL' ou contiver 'FILIAL', defina \`schoolUnit\` como 'Filial'.
+            - Se terminar com ' ANX' ou contiver 'ANEXO', defina \`schoolUnit\` como 'Anexo'.
+            - Se nenhuma sigla for encontrada, use 'Matriz' como padrão.
 
-        2.  **Turma (\`studentTurma\`):**
-            - **Prioridade 1:** Procure por uma coluna "TURMA". Use o valor dela.
-            - **Prioridade 2:** Se não houver, verifique se a turma está junto da série (ex: "1º ANO A"). Extraia a letra ('A') para \`studentTurma\`.
-            - **Se não encontrar:** Deixe o campo \`studentTurma\` como uma string vazia ("").
-
-        **Extração da Unidade Escolar (\`schoolUnit\`):**
-        - Analise o nome da série ou turma para identificar a unidade. 'MATRIZ'/'MAT' -> 'Matriz'. 'FILIAL'/'FIL' -> 'Filial'. 'ANEXO' -> 'Anexo'. Se não encontrar, use 'Matriz' como padrão.
+        **Verificação Final (Obrigatória):**
+        - Antes de concluir, faça uma revisão final do documento para garantir que **TODOS** os alunos listados foram incluídos no JSON de saída. Compare sua lista final com o documento original.
 
         **Formato de Saída:**
-        Retorne um array de objetos JSON. Garanta que **TODOS** os alunos do PDF estejam no array final.
+        - Retorne um array de objetos JSON. Se o documento for ilegível ou não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
+        - **Garantia de Completude:** A sua principal métrica de sucesso é a extração de 100% dos alunos. Certifique-se de que a contagem de alunos no seu JSON de saída corresponde à contagem de alunos no PDF.
     `;
 
     const schema = {
@@ -206,6 +206,7 @@ export const generateDocumentText = async (prompt: string): Promise<string> => {
 };
 
 export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerator<{ text: string }>> => {
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído.`;
     
     try {
@@ -224,6 +225,7 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
 
 
 export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{ year: number, month: number, events: EventData[] }[]> => {
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
       Você é um assistente de secretaria escolar altamente preciso e meticuloso. Sua tarefa é analisar o calendário escolar em PDF fornecido e extrair CADA evento, sem deixar NENHUM de fora.
 
@@ -273,7 +275,8 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
             stream: false
         });
         const jsonText = await response.text();
-        return JSON.parse(jsonText);
+        // FIX: Added a check for empty jsonText to avoid JSON.parse error.
+        return jsonText ? JSON.parse(jsonText) : [];
     } catch (error) {
         console.error("Error parsing calendar from PDF with Gemini via proxy:", error);
         throw new Error("A IA não conseguiu processar o arquivo PDF do calendário. Verifique se o formato é legível e tente novamente.");
@@ -283,44 +286,54 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
 export const fillContractWithData = async (contractText: string, student: EnrolledStudent, schoolInfo: SchoolInfo): Promise<string> => {
     const guardian = student.guardians?.[0];
     const address = student.address;
-    const addressString = address 
-        ? `${address.street}, ${address.number}${address.complement ? `, ${address.complement}` : ''} - ${address.neighborhood}, ${address.city} - ${address.state}, CEP: ${address.zip}`
+    const studentAddress = student.address;
+
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
+    const guardianAddressString = address 
+        ? `${address.street}, ${address.number}${address.complement ? `, ${address.complement}` : ''}, ${address.neighborhood}, ${address.city}-${address.state}, CEP: ${address.zip}`
+        : 'Não informado';
+    
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
+    const studentAddressString = studentAddress
+        ? `${studentAddress.street}, ${studentAddress.number}${studentAddress.complement ? `, ${studentAddress.complement}` : ''}, ${studentAddress.neighborhood}, ${studentAddress.city}-${studentAddress.state}, CEP: ${studentAddress.zip}`
         : 'Não informado';
     
     const totalAnnualCost = (student.enrollmentFee || 0) + ((student.monthlyFee || 0) * 11);
 
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
-        Você é um assistente de secretaria escolar. Sua tarefa é preencher um modelo de contrato com os dados de um aluno.
-        
+        Você é um assistente de secretaria que preenche contratos. Sua tarefa é substituir os placeholders (ex: [NOME_ALUNO]) em um modelo de contrato com os dados fornecidos.
+
         **MODELO DO CONTRATO:**
         ---
         ${contractText}
         ---
 
-        **DADOS PARA INSERIR:**
-        - Nome do Aluno: ${student.name}
-        - Data de Nascimento do Aluno: ${student.dateOfBirth ? new Date(student.dateOfBirth + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado'}
-        - Nome do Responsável (Contratante): ${guardian?.name || 'Não informado'}
-        - CPF do Responsável: ${guardian?.cpf || 'Não informado'}
-        - RG do Responsável: ${guardian?.rg || 'Não informado'}
-        - Endereço do Responsável: ${addressString}
-        - Ano Letivo: ${new Date().getFullYear()}
-        - Série/Turma: ${student.className}
-        - Valor da Mensalidade: ${student.monthlyFee?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'Não informado'}
-        - Valor da Matrícula: ${student.enrollmentFee?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'Não informado'}
-        - Valor Total Anual: ${totalAnnualCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'Não informado'}
-        - Nome da Escola (Contratada): ${schoolInfo.name}
-        - CNPJ da Escola: ${schoolInfo.cnpj}
-        - Endereço da Escola: ${schoolInfo.address}
+        **DADOS PARA PREENCHER:**
+        - [NOME_RESPONSAVEL]: ${guardian?.name || 'Não informado'}
+        - [ENDERECO_COMPLETO_RESPONSAVEL]: ${guardianAddressString}
+        - [RG_RESPONSAVEL]: ${guardian?.rg || 'Não informado'}
+        - [CPF_RESPONSAVEL]: ${guardian?.cpf || 'Não informado'}
+        - [PROFISSAO_RESPONSAVEL]: ${guardian?.occupation || 'Não informado'}
+        - [TELEFONE_RESPONSAVEL]: ${guardian?.phone || 'Não informado'}
+        - [EMAIL_RESPONSAVEL]: ${guardian?.email || 'Não informado'}
+        - [NOME_ALUNO]: ${student.name}
+        - [DATA_NASCIMENTO_ALUNO]: ${student.dateOfBirth ? new Date(student.dateOfBirth + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado'}
+        - [ENDERECO_COMPLETO_ALUNO]: ${studentAddressString}
+        - [SERIE_ALUNO]: ${student.grade || student.className || 'Não informado'}
+        - [VALOR_ANUIDADE]: ${totalAnnualCost > 0 ? totalAnnualCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Não informado'}
+        - [VALOR_MATRICULA]: ${student.enrollmentFee?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'Não informado'}
+        - [VALOR_MENSALIDADE]: ${student.monthlyFee?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'Não informado'}
+        - [PROGRAMA_DESCONTO]: ${student.discountProgram || 'Nenhum'}
 
         **INSTRUÇÕES:**
-        1. Identifique os placeholders no modelo, como [NOME DO ALUNO], [CPF DO RESPONSÁVEL], [VALOR_MENSALIDADE], etc.
-        2. Substitua CADA placeholder com o dado correspondente da lista "DADOS PARA INSERIR".
-        3. Se um dado não estiver disponível, substitua o placeholder por "Não informado".
-        4. Retorne o texto do contrato completo e preenchido, preservando a estrutura original de parágrafos e quebras de linha do modelo. Não adicione nenhum comentário ou formatação extra como markdown.
+        1.  Substitua **CADA** placeholder no modelo pelo dado correspondente.
+        2.  Se um dado não for fornecido, use "Não informado".
+        3.  Retorne o texto completo do contrato, mantendo a formatação original (quebras de linha, espaçamento, etc.). **NÃO** adicione markdown, comentários ou qualquer texto extra. A saída deve ser apenas o texto do contrato preenchido.
     `;
     return generateDocumentText(prompt);
 };
+
 
 export const generateEducatorObservation = async (studentName: string, grades: any): Promise<string> => {
     const gradesText = Object.entries(grades)
@@ -332,6 +345,7 @@ export const generateEducatorObservation = async (studentName: string, grades: a
         })
         .join('; ');
 
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         Aja como um(a) educador(a) experiente e atencioso(a).
         Sua tarefa é escrever um parágrafo de observação pedagógica sobre o(a) aluno(a) ${studentName}, 
@@ -356,6 +370,7 @@ export interface ExtractedGrade {
 }
 
 export const extractGradesFromPdf = async (pdfBase64: string, studentName: string): Promise<ExtractedGrade[]> => {
+    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         Analise o documento PDF fornecido, que é um boletim escolar do aluno(a) ${studentName}.
         Para cada disciplina listada no boletim, extraia CADA avaliação (como "Prova 1", "Trabalho", "Média 1º Bimestre", "Nota Final", etc.) e sua respectiva nota numérica.

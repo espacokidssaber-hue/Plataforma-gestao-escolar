@@ -61,4 +61,15 @@ CLÁUSULA 7ª - Para dirimir questões oriundas deste Contrato, fica eleito o Fo
 
 E por estarem justos e contratados, assinam o presente instrumento.
 
+João Pessoa, _____ de _______________ de _______.
+
+
+_________________________________________
+[NOME_RESPONSAVEL]
+(CONTRATANTE)
+
+
+_________________________________________
+ESPAÇO KIDS DO SABER
+(CONTRATADA)
 `;

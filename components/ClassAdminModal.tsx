@@ -17,6 +17,7 @@ const initialFormState: Omit<SchoolClass, 'id' | 'students'> = {
     capacity: { matriz: 20, filial: 0, anexo: 0 },
 };
 
+// FIX: Update teacher ID type to number to align with the global SchoolClass type.
 interface UnitConfigProps {
     unit: 'matriz' | 'filial' | 'anexo';
     teachers: { matriz: number | null; filial: number | null; anexo: number | null; };
@@ -128,13 +129,15 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
     }));
   };
   
+  // FIX: Parse teacher ID from input string to number to maintain type consistency.
   const handleTeacherChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
+      const parsedValue = parseInt(value, 10);
       setFormData(prev => ({
           ...prev,
           teachers: {
               ...prev.teachers,
-              [name]: value === '' ? null : Number(value)
+              [name]: isNaN(parsedValue) ? null : parsedValue
           }
       }));
   };

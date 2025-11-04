@@ -1,12 +1,8 @@
 
 
 import React, { useState } from 'react';
-
-export interface EventData {
-    day: number;
-    label: string;
-    type: 'exam' | 'holiday' | 'event' | 'other';
-}
+// FIX: Removed local EventData definition and imported from central types file.
+import { EventData } from '../../types';
 
 interface AddEventModalProps {
     day: number | null;

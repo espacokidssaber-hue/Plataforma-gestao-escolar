@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { User } from '../contexts/AuthContext';
-import { UserRole } from '../types';
+import { UserRole, SchoolUnit } from '../types';
 
 interface UserEditModalProps {
     userToEdit: User | null;
@@ -29,6 +29,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ userToEdit, onClose }) =>
     const isEditing = !!userToEdit;
     const [username, setUsername] = useState('');
     const [role, setRole] = useState<UserRole>('educator');
+    const [unit, setUnit] = useState<SchoolUnit | undefined>(undefined);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -39,17 +40,25 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ userToEdit, onClose }) =>
         if (isEditing && userToEdit) {
             setUsername(userToEdit.username);
             setRole(userToEdit.role);
+            setUnit(userToEdit.unit);
             const currentPassword = passwords[userToEdit.username] || '';
             setPassword(currentPassword);
             setConfirmPassword(currentPassword);
         } else {
             setUsername('');
             setRole('educator');
+            setUnit(undefined);
             setPassword('');
             setConfirmPassword('');
         }
         setError('');
     }, [userToEdit, isEditing, passwords]);
+    
+    useEffect(() => {
+        if (role !== 'secretary') {
+            setUnit(undefined);
+        }
+    }, [role]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -57,6 +66,11 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ userToEdit, onClose }) =>
         
         if (username.trim() === '') {
             setError("O nome de usuário não pode ser vazio.");
+            return;
+        }
+        
+        if (role === 'secretary' && !unit) {
+            setError("Por favor, selecione uma unidade para o papel de secretaria.");
             return;
         }
 
@@ -71,10 +85,11 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ userToEdit, onClose }) =>
         }
         
         try {
+            const userData = { username, role, unit: role === 'secretary' ? unit : undefined };
             if (isEditing && userToEdit) {
-                updateUser({ ...userToEdit, username, role }, password);
+                updateUser({ ...userToEdit, ...userData }, password);
             } else {
-                addUser({ username, role }, password);
+                addUser(userData, password);
             }
             onClose();
         } catch (err) {
@@ -102,18 +117,35 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ userToEdit, onClose }) =>
                             className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
                         />
                     </div>
-                    <div>
-                        <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Papel</label>
-                        <select
-                            id="role"
-                            value={role}
-                            onChange={e => setRole(e.target.value as UserRole)}
-                            className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
-                        >
-                            <option value="educator">Educador</option>
-                            <option value="secretary">Secretária(o)</option>
-                            <option value="admin">Administrador</option>
-                        </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Papel</label>
+                            <select
+                                id="role"
+                                value={role}
+                                onChange={e => setRole(e.target.value as UserRole)}
+                                className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
+                            >
+                                <option value="educator">Educador</option>
+                                <option value="secretary">Secretária(o)</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        {role === 'secretary' && (
+                             <div>
+                                <label htmlFor="unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unidade</label>
+                                <select
+                                    id="unit"
+                                    value={unit || ''}
+                                    onChange={e => setUnit(e.target.value as SchoolUnit)}
+                                    required
+                                    className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
+                                >
+                                    <option value="">Selecione a Unidade</option>
+                                    {Object.values(SchoolUnit).map(u => <option key={u} value={u}>{u}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label htmlFor="password"  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Senha</label>
