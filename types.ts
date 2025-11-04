@@ -306,6 +306,7 @@ export interface SchoolClass {
     unit: SchoolUnit;
     room: string;
     teachers: {
+        // FIX: The teacher ID should be a number to match the User/Educator ID type, not a string.
         matriz: number | null;
         filial: number | null;
         anexo: number | null;

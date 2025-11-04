@@ -17,7 +17,6 @@ const initialFormState: Omit<SchoolClass, 'id' | 'students'> = {
     capacity: { matriz: 20, filial: 0, anexo: 0 },
 };
 
-// FIX: Update teacher ID type to number to align with the global SchoolClass type.
 interface UnitConfigProps {
     unit: 'matriz' | 'filial' | 'anexo';
     teachers: { matriz: number | null; filial: number | null; anexo: number | null; };
@@ -31,13 +30,15 @@ const UnitConfig: React.FC<UnitConfigProps> = ({ unit, teachers, capacity, onTea
         <h4 className="font-bold text-center text-gray-900 dark:text-white mb-2">{unit.charAt(0).toUpperCase() + unit.slice(1)}</h4>
         <div>
             <label htmlFor={`teacher-${unit}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Professor(a)</label>
+            {/* FIX: Changed input type to "number" and added placeholder for clarity, as it expects an Educator ID. */}
             <input 
-                type="text" 
+                type="number" 
                 id={`teacher-${unit}`} 
                 name={unit} 
                 value={teachers[unit] ?? ''} 
                 onChange={onTeacherChange} 
                 className="w-full bg-white dark:bg-gray-700/80 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 transition" 
+                placeholder="ID do Educador"
             />
         </div>
         <div>
@@ -129,15 +130,15 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
     }));
   };
   
-  // FIX: Parse teacher ID from input string to number to maintain type consistency.
+  // FIX: Updated handler to parse the input value to a number to match the corrected type in types.ts.
   const handleTeacherChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
-      const parsedValue = parseInt(value, 10);
+      const numValue = parseInt(value, 10);
       setFormData(prev => ({
           ...prev,
           teachers: {
               ...prev.teachers,
-              [name]: isNaN(parsedValue) ? null : parsedValue
+              [name]: isNaN(numValue) ? null : numValue
           }
       }));
   };
