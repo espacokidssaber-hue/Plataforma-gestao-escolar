@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { EnrollmentSubView, Lead, LeadStatus, EnrolledStudent, Guardian, StudentAddress, StudentLifecycleStatus, SchoolClass, ClassPeriod, SchoolUnit, SchoolInfo, Contact } from '../types';
-// FIX: Changed to a named import as EnrollmentFunnel does not have a default export.
 import { EnrollmentFunnel } from './EnrollmentFunnel';
 import NewEnrollmentsWorkflow from './NewEnrollmentsWorkflow';
 import ReEnrollmentCampaign from './ReEnrollmentCampaign';
@@ -10,10 +9,12 @@ import { EnrollmentReports } from './EnrollmentReports';
 import { EnrollmentSettings } from './EnrollmentSettings';
 import PublicLinkModal from './PublicLinkModal';
 import PublicEnrollmentForm from './PublicEnrollmentForm';
+// FIX: Corrected import path for EnrollmentContext
 import { useEnrollment } from '../contexts/EnrollmentContext';
 import { extractEnrolledStudentsFromPdf, ExtractedStudent } from '../services/geminiService';
 import * as XLSX from 'xlsx';
-import { useSchoolInfo } from '../App';
+// FIX: Corrected import path for EnrollmentContext
+import { useSchoolInfo } from '../contexts/EnrollmentContext';
 
 const SubNavButton: React.FC<{
     label: string;

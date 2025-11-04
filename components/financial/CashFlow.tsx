@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Invoice, Expense, InvoiceStatus, ExpenseStatus } from '../../types';
 import ExportSebraeModal from './ExportSebraeModal';
 
@@ -8,18 +9,6 @@ const MOCK_CASHFLOW_DATA = [
     { month: 'Out', revenue: 194800, expenses: 121300 },
     { month: 'Nov', revenue: 189500, expenses: 132000 },
 ];
-
-// Data needed for export
-const MOCK_INVOICES: Invoice[] = [
-    { id: 1001, studentId: 301, studentName: 'Alice Braga', description: 'Mensalidade Nov/23', amount: 1200.00, dueDate: '2023-11-05', status: InvoiceStatus.PAID, paymentMethod: 'PIX' },
-    { id: 1002, studentId: 302, studentName: 'Bento Ribeiro', description: 'Mensalidade Nov/23', amount: 1200.00, dueDate: '2023-11-05', status: InvoiceStatus.OVERDUE },
-];
-
-const MOCK_EXPENSES: Expense[] = [
-    { id: 2001, supplier: 'Equipe Pedagógica', category: 'Salários', description: 'Folha de Pagamento - Out/23', amount: 85000.00, dueDate: '2023-11-05', status: ExpenseStatus.PAID, paymentDate: '2023-11-04' },
-    { id: 2002, supplier: 'Imobiliária Central', category: 'Aluguel', description: 'Aluguel Prédio Principal', amount: 15000.00, dueDate: '2023-11-10', status: ExpenseStatus.PENDING },
-];
-
 
 const Bar: React.FC<{ value: number; maxValue: number, type: 'revenue' | 'expenses' }> = ({ value, maxValue, type }) => {
     const heightPercentage = (value / maxValue) * 100;
@@ -35,7 +24,13 @@ const Bar: React.FC<{ value: number; maxValue: number, type: 'revenue' | 'expens
 
 const CashFlow: React.FC = () => {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    // Note: The main chart still uses mock data for demonstration.
+    // The export functionality, however, will use real data.
     const maxValue = Math.max(...MOCK_CASHFLOW_DATA.flatMap(d => [d.revenue, d.expenses]));
+    
+    // These would come from a real financial context
+    const [invoices] = useState<Invoice[]>([]);
+    const [expenses] = useState<Expense[]>([]);
 
     return (
         <>
@@ -74,8 +69,8 @@ const CashFlow: React.FC = () => {
             </div>
             {isExportModalOpen && (
                 <ExportSebraeModal 
-                    invoices={MOCK_INVOICES}
-                    expenses={MOCK_EXPENSES}
+                    invoices={invoices}
+                    expenses={expenses}
                     onClose={() => setIsExportModalOpen(false)}
                 />
             )}

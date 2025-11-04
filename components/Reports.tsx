@@ -2,6 +2,9 @@ import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { streamDocumentText } from '../services/geminiService';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
+// FIX: Changed import path for useSchoolInfo from App.tsx to EnrollmentContext.tsx as it is exported from there.
+import { useSchoolInfo } from '../contexts/EnrollmentContext';
+import { SchoolInfo } from '../types';
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;
@@ -192,7 +195,7 @@ const SmallSpinner: React.FC = () => (
     </svg>
 );
 
-const PrintableReport: React.FC<{ title: string; data: any[], onRendered: () => void; }> = ({ title, data, onRendered }) => {
+const PrintableReport: React.FC<{ title: string; data: any[]; schoolInfo: SchoolInfo, onRendered: () => void; }> = ({ title, data, schoolInfo, onRendered }) => {
     useLayoutEffect(() => {
         onRendered();
     }, [onRendered]);
@@ -202,7 +205,23 @@ const PrintableReport: React.FC<{ title: string; data: any[], onRendered: () => 
 
     return (
         <div id="printable-report-content" className="p-4 bg-white text-black printable-annual-report">
-            <h2 className="text-xl font-bold mb-4">{title}</h2>
+            <header className="flex items-start space-x-4 mb-4">
+                <div className="h-20 w-20 flex-shrink-0 flex items-center justify-center">
+                    {schoolInfo.logo ? (
+                        <img src={schoolInfo.logo} alt="Logo" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                        <div className="h-20 w-20 bg-gray-200"></div>
+                    )}
+                </div>
+                <div className="text-center flex-grow">
+                    <h1 className="text-xl font-bold uppercase">{schoolInfo.name}</h1>
+                    <p className="text-xs">{schoolInfo.address}</p>
+                    <p className="text-xs">CNPJ: {schoolInfo.cnpj} | Telefone: {schoolInfo.phone}</p>
+                </div>
+                <div className="w-20 flex-shrink-0"></div>
+            </header>
+
+            <h2 className="text-xl font-bold mb-4 text-center">{title}</h2>
             <table className="w-full border-collapse text-xs">
                 <thead>
                     <tr className="bg-gray-100">
@@ -231,7 +250,8 @@ const Reports: React.FC = () => {
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [displayData, setDisplayData] = useState(ALL_MOCK_DATA[selectedYear][selectedLevel]);
     const { enrolledStudents, classes } = useEnrollment();
-    const [printablePdfContent, setPrintablePdfContent] = useState<{ title: string; data: any[] } | null>(null);
+    const { schoolInfo } = useSchoolInfo();
+    const [printablePdfContent, setPrintablePdfContent] = useState<{ title: string; data: any[]; schoolInfo: SchoolInfo } | null>(null);
 
     const operationalReports = [
         { name: "Lista Mestra de Alunos", description: "Tabela completa com todos os alunos matriculados e seus dados." },
@@ -387,7 +407,7 @@ const Reports: React.FC = () => {
                 XLSX.utils.book_append_sheet(workbook, worksheet, 'Relatório');
                 XLSX.writeFile(workbook, filename);
             } else {
-                setPrintablePdfContent({ title: reportName, data });
+                setPrintablePdfContent({ title: reportName, data, schoolInfo });
             }
 
         } catch (error) {
@@ -498,6 +518,7 @@ const Reports: React.FC = () => {
                     <PrintableReport 
                         title={printablePdfContent.title} 
                         data={printablePdfContent.data}
+                        schoolInfo={printablePdfContent.schoolInfo}
                         onRendered={handlePdfRendered}
                     />
                 </div>

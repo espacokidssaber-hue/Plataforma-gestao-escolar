@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { UserRole, EducatorStatus } from '../types';
-import { MOCK_EDUCATORS } from '../data/educatorsData';
+import { UserRole } from '../types';
 
 export interface User {
     id: number;
@@ -8,46 +7,72 @@ export interface User {
     role: UserRole;
 }
 
-// Convert active educators to users who can log in
-const educatorUsers: User[] = MOCK_EDUCATORS
-    .filter(e => e.status === EducatorStatus.ACTIVE)
-    .map(educator => ({
-        id: educator.id,
-        // Create a simple username from their first name, e.g., 'ana' from 'Prof. Ana Silva'
-        username: educator.name.replace(/Prof\.?\s*/, '').split(' ')[0].toLowerCase(),
-        // For now, all educators including coordinators get the 'educator' role for class-specific access
-        role: 'educator',
-    }));
+// ==================================================================================
+// AUTH DATA VERSIONING AND MIGRATION
+// ==================================================================================
 
+const CURRENT_AUTH_VERSION = "1.1.0";
 
-// Initial mock users, which will be the default if nothing is in local storage
-const INITIAL_MOCK_USERS: User[] = [
-    { id: 1000, username: 'admin', role: 'admin' }, // Changed ID to avoid conflict with educator IDs
-    { id: 1001, username: 'secretaria', role: 'secretary' },
-    ...educatorUsers
-];
+const migrateAuthData = () => {
+    const legacyUserKey = 'app_users';
+    const legacyPasswordKey = 'app_passwords';
+    
+    if (localStorage.getItem(legacyUserKey)) {
+        console.log("Legacy auth data found. Migrating to version 1.1.0...");
+        const users = JSON.parse(localStorage.getItem(legacyUserKey) || '[]');
+        const passwords = JSON.parse(localStorage.getItem(legacyPasswordKey) || '{}');
+        
+        const initialData = {
+            users: users.length > 0 ? users : [
+                { id: 1000, username: 'admin', role: 'admin' },
+                { id: 1001, username: 'secretaria', role: 'secretary' },
+            ],
+            passwords: Object.keys(passwords).length > 0 ? passwords : {
+                admin: '123',
+                secretaria: '123',
+            }
+        };
 
-// In a real app, this would be handled by a backend.
-const MOCK_PASSWORDS: Record<string, string> = {
-    admin: '123',
-    secretaria: '123',
-};
-// Create a default password '123' for all educators
-educatorUsers.forEach(user => {
-    MOCK_PASSWORDS[user.username] = '123';
-});
+        const versionedData = {
+            version: CURRENT_AUTH_VERSION,
+            data: initialData
+        };
+        
+        localStorage.setItem('auth_data', JSON.stringify(versionedData));
+        localStorage.removeItem(legacyUserKey);
+        localStorage.removeItem(legacyPasswordKey);
 
-
-// Helper to get from local storage
-const getFromStorage = <T,>(key: string, defaultValue: T): T => {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-        console.error(`Error reading from localStorage key ${key}:`, error);
-        return defaultValue;
+        console.log("Auth data migration complete.");
+        return initialData;
     }
+
+    const storedDataJSON = localStorage.getItem('auth_data');
+    if (storedDataJSON) {
+        const storedData = JSON.parse(storedDataJSON);
+        if (storedData.version === CURRENT_AUTH_VERSION) {
+            return storedData.data;
+        } else {
+             console.warn(`Auth data version mismatch. Found ${storedData.version}, expected ${CURRENT_AUTH_VERSION}.`);
+             return storedData.data; // Future migrations here
+        }
+    }
+    
+    // Default initial state if nothing exists
+    return {
+        users: [
+            { id: 1000, username: 'admin', role: 'admin' },
+            { id: 1001, username: 'secretaria', role: 'secretary' },
+        ],
+        passwords: {
+            admin: '123',
+            secretaria: '123',
+        },
+    };
 };
+
+// ==================================================================================
+// AUTH CONTEXT
+// ==================================================================================
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -64,10 +89,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(() => getFromStorage('authUser', null));
-    const [users, setUsers] = useState<User[]>(() => getFromStorage('app_users', INITIAL_MOCK_USERS));
-    // Passwords are not persisted for security simulation. They reset on refresh.
-    const [passwords, setPasswords] = useState(() => getFromStorage('app_passwords', MOCK_PASSWORDS));
+    const [initialData] = useState(() => migrateAuthData());
+    const [user, setUser] = useState<User | null>(() => JSON.parse(localStorage.getItem('authUser') || 'null'));
+    const [users, setUsers] = useState<User[]>(initialData.users);
+    const [passwords, setPasswords] = useState<Record<string, string>>(initialData.passwords);
 
     useEffect(() => {
         if (user) {
@@ -78,8 +103,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     useEffect(() => {
-        localStorage.setItem('app_users', JSON.stringify(users));
-        localStorage.setItem('app_passwords', JSON.stringify(passwords));
+        const versionedData = {
+            version: CURRENT_AUTH_VERSION,
+            data: { users, passwords }
+        };
+        localStorage.setItem('auth_data', JSON.stringify(versionedData));
     }, [users, passwords]);
 
 

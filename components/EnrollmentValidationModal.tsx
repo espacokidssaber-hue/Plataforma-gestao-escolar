@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Applicant, NewEnrollmentStatus, DocumentStatus, StudentDocument, Guardian, HealthInfo, StudentAddress } from '../types';
 import EnrollmentChecklist from './EnrollmentChecklist';
 import EnrollmentPaymentModal from './EnrollmentPaymentModal';
-import { generateJsonFromText } from '../services/geminiService';
+import { generateJsonFromText } from '../../services/geminiService';
 
 interface EnrollmentValidationModalProps {
   applicant: Applicant;
   onClose: () => void;
   onSave: (updatedApplicant: Applicant) => void;
+  onFinalize: (applicant: Applicant) => void;
 }
 
 const InputField: React.FC<{ label: string; name: string; value: string | undefined; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void; type?: string; required?: boolean; as?: 'textarea' }> = ({ label, name, value, onChange, type = 'text', required = false, as }) => (
@@ -37,7 +38,7 @@ const InputField: React.FC<{ label: string; name: string; value: string | undefi
 );
 
 
-const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ applicant, onClose, onSave }) => {
+const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ applicant, onClose, onSave, onFinalize }) => {
     const DISCOUNT_PROGRAMS = useMemo(() => {
         const saved = localStorage.getItem('crmOptions');
         if (saved) {
@@ -147,7 +148,7 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
     };
     
     const handleFinalizeEnrollment = () => {
-        onSave({...currentApplicant, status: NewEnrollmentStatus.ENROLLED});
+        onFinalize(currentApplicant);
     };
     
     const allDocsApproved = useMemo(() => {

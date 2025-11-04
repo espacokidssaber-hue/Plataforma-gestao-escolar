@@ -28,7 +28,7 @@ const PrintableDeclaration: React.FC<PrintableDeclarationProps> = ({ text, schoo
 
     return (
         <div className="printable-declaration bg-white text-black font-serif">
-            <header className="flex items-center space-x-4 border-b-2 border-gray-700 pb-4">
+            <header className="flex items-start space-x-4 border-b-2 border-gray-700 pb-4">
                 <div className="h-20 w-20 flex-shrink-0 flex items-center justify-center">
                     {schoolInfo.logo ? (
                         <img src={schoolInfo.logo} alt="Logo da Instituição" className="max-h-full max-w-full object-contain" />

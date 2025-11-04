@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Educator, EducatorStatus } from '../../types';
 import AddEducatorModal from './AddEducatorModal';
-import { MOCK_EDUCATORS } from '../../data/educatorsData';
 
 // --- AVATAR UTILS START ---
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
@@ -23,7 +22,7 @@ type SaveEducatorData = Omit<Educator, 'id' | 'avatar'> & { id?: number; avatar:
 
 
 const Educators: React.FC = () => {
-    const [educators, setEducators] = useState<Educator[]>(MOCK_EDUCATORS);
+    const [educators, setEducators] = useState<Educator[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [educatorToEdit, setEducatorToEdit] = useState<Educator | null>(null);
 
@@ -116,6 +115,9 @@ const Educators: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
+                 {educators.length === 0 && (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma educadora cadastrada.</p>
+                 )}
             </div>
              {isModalOpen && (
                 <AddEducatorModal

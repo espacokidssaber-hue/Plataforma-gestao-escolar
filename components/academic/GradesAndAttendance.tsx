@@ -6,9 +6,10 @@ import AnnualStudentGradesModal from './AnnualStudentGradesModal';
 import AttendanceReportModal from './AttendanceReportModal';
 import PrintableMonthlyAttendance from './PrintableMonthlyAttendance';
 import { MOCK_CALENDAR_EVENTS } from '../../data/calendarData';
+// FIX: Corrected import path for EnrollmentContext
 import { useEnrollment } from '../../contexts/EnrollmentContext';
-import { MOCK_STUDENTS_ACADEMIC } from '../../data/academicRecordsData';
-import { useSchoolInfo } from '../../App';
+// FIX: Corrected import path for EnrollmentContext
+import { useSchoolInfo } from '../../contexts/EnrollmentContext';
 import { extractGradesFromPdf, ExtractedGrade } from '../../services/geminiService';
 import ImportGradesModal from './ImportGradesModal';
 import ImportGradesResultModal from './ImportGradesResultModal';
@@ -18,12 +19,6 @@ import StudentObservationModal from './StudentObservationModal';
 interface GradesAndAttendanceProps {
   selectedClass: { id: number; name:string } | null;
 }
-
-// Mock data for the class selector dropdown
-const MOCK_TEACHER_CLASSES_LIST = [
-    { id: 2, name: '1º Ano A', grade: '1º Ano' },
-    { id: 3, name: '2º Ano B', grade: '2º Ano' },
-];
 
 const GradeInput: React.FC<{ value: Grade, onChange: (value: Grade) => void, isDirty: boolean }> = ({ value, onChange, isDirty }) => (
     <div className="relative">
@@ -58,8 +53,7 @@ const AttendanceSelector: React.FC<{ value: AttendanceStatus, onChange: (value: 
 
 
 const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass: initialSelectedClass }) => {
-    // FIX: Destructured schoolInfo from the correct context hook (useSchoolInfo).
-    const { classLogs, subjects, addSubject, classes } = useEnrollment();
+    const { classLogs, subjects, addSubject, classes, enrolledStudents } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
     const [activeTab, setActiveTab] = useState<'attendance' | 'grades'>('grades');
     const [selectedClass, setSelectedClass] = useState(initialSelectedClass);
@@ -95,11 +89,20 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
 
     useEffect(() => {
         if (selectedClass) {
-            const dataForClass = MOCK_STUDENTS_ACADEMIC[selectedClass.id] || [];
-            setStudentsData(JSON.parse(JSON.stringify(dataForClass)));
-            setInitialStudentsData(JSON.parse(JSON.stringify(dataForClass)));
+            // In a real app, this data would be fetched. For now, we create it from the enrolled students list.
+            const studentsInClass = enrolledStudents.filter(s => s.classId === selectedClass.id);
+            const academicDataForClass = studentsInClass.map(s => ({
+                studentId: s.id,
+                studentName: s.name,
+                avatar: s.avatar,
+                grades: {},
+                attendance: {},
+                observations: [],
+            }));
+            setStudentsData(JSON.parse(JSON.stringify(academicDataForClass)));
+            setInitialStudentsData(JSON.parse(JSON.stringify(academicDataForClass)));
         }
-    }, [selectedClass]);
+    }, [selectedClass, enrolledStudents]);
     
     useEffect(() => {
         const handlePrint = (onAfterPrint: () => void) => {
@@ -370,8 +373,14 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                                 ))}
                             </tbody>
                         </table>
+                         {studentsData.length === 0 && (
+                            <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhum aluno nesta turma.</p>
+                         )}
                     </div>
                  </div>
+            )}
+            {!selectedClass && (
+                 <p className="text-center text-gray-500 dark:text-gray-400 py-10">Por favor, selecione uma turma para começar.</p>
             )}
         </div>
 

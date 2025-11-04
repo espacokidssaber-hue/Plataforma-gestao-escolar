@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from '../types';
-import { useSchoolInfo } from '../App';
+// FIX: Corrected import path for useSchoolInfo from EnrollmentContext
+import { useSchoolInfo } from '../contexts/EnrollmentContext';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SidebarProps {

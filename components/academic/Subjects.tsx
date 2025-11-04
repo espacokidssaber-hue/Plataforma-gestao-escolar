@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { Subject } from '../../types';
 import SubjectModal from './SubjectModal';
 import SubjectConfigModal from './SubjectConfigModal';
-import { MOCK_SUBJECTS } from '../../data/subjectsData';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
 
 const Subjects: React.FC = () => {
-    const [subjects, setSubjects] = useState<Subject[]>(MOCK_SUBJECTS);
+    // Subjects are now managed globally in EnrollmentContext, but for this component,
+    // we manage a local copy to demonstrate adding/editing.
+    // In a real app with a backend, you'd fetch and update from the context/API.
+    const { subjects: initialSubjects } = useEnrollment();
+    const [subjects, setSubjects] = useState<Subject[]>(initialSubjects);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [subjectToEdit, setSubjectToEdit] = useState<Subject | null>(null);
@@ -111,6 +115,9 @@ const Subjects: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
+                 {subjects.length === 0 && (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma disciplina cadastrada.</p>
+                 )}
             </div>
             {isModalOpen && <SubjectModal subjectToEdit={subjectToEdit} onClose={handleCloseModals} onSave={handleSaveSubject} />}
             {isConfigModalOpen && subjectToEdit && <SubjectConfigModal subject={subjectToEdit} onClose={handleCloseModals} onSave={handleSaveConfig} />}

@@ -10,7 +10,6 @@ interface PostScheduleConfirmationModalProps {
 
 const PostScheduleConfirmationModal: React.FC<PostScheduleConfirmationModalProps> = ({ details, onClose }) => {
     
-    // FIX: Replaced Intl.ListFormat with a manual implementation for better compatibility.
     const renderMessage = () => {
         if (!details) {
             return "O convite foi enviado para o(s) participante(s) selecionado(s).";

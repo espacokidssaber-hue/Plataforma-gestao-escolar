@@ -45,7 +45,6 @@ const Archive: React.FC = () => {
             if (Array.isArray(node)) {
                 return node.map(renderNodeToString).join('');
             }
-            // FIX: Cast node.props to access children property safely.
             if (React.isValidElement(node)) {
                 const props = node.props as { children?: React.ReactNode; [key: string]: any };
                 if (props.children) {
@@ -162,7 +161,6 @@ const Archive: React.FC = () => {
                                     </div>
                                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white hidden print:block !mt-0">{section.title}</h2>
                                     <div className="mt-4 text-gray-700 dark:text-gray-300">
-                                         {/* FIX: Cast element to let cloneElement know about the 'highlight' prop. */}
                                          {React.cloneElement(section.content as React.ReactElement<{ highlight?: string }>, { highlight: searchTerm })}
                                     </div>
                                 </section>

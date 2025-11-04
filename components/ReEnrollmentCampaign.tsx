@@ -4,22 +4,8 @@ import { streamMessage } from '../services/geminiService';
 import ReEnrollmentPortal from './ReEnrollmentPortal';
 import IndividualInviteModal from './IndividualInviteModal';
 import BulkInviteConfirmModal from './BulkInviteConfirmModal'; // Importado
+import { useEnrollment } from '../contexts/EnrollmentContext';
 
-// --- AVATAR UTILS START ---
-const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
-const stringToColor = (str: string): string => { let hash = 0; if (!str) return '#cccccc'; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); hash = hash & hash; } let color = '#'; for (let i = 0; i < 3; i++) { const value = (hash >> (i * 8)) & 0xFF; const adjustedValue = 100 + (value % 156); color += ('00' + adjustedValue.toString(16)).substr(-2); } return color; };
-const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
-// --- AVATAR UTILS END ---
-
-const MOCK_STUDENTS_LIST: ReEnrollingStudent[] = [
-  { id: 201, name: 'Lucas Mendes', avatar: generateAvatar('Lucas Mendes'), currentGrade: '1º Ano A', nextGrade: '2º Ano A', status: ReEnrollmentStatus.COMPLETED, guardianName: 'Ricardo Mendes', lastActionDate: '2023-11-05', paymentStatus: 'Pago', contractSignature: 'Digital', documents: [], reenrollmentFee: 480, unit: SchoolUnit.MATRIZ },
-  { id: 202, name: 'Sofia Oliveira', avatar: generateAvatar('Sofia Oliveira'), currentGrade: 'Infantil II', nextGrade: 'Infantil III', status: ReEnrollmentStatus.PAYMENT_PENDING, guardianName: 'Cláudia Oliveira', lastActionDate: '2023-11-10', paymentStatus: 'Pendente', contractSignature: 'Digital', documents: [], reenrollmentFee: 500, unit: SchoolUnit.MATRIZ },
-  { id: 203, name: 'Mateus Pereira', avatar: generateAvatar('Mateus Pereira'), currentGrade: '3º Ano B', nextGrade: '4º Ano B', status: ReEnrollmentStatus.PENDING_INVITE, guardianName: 'Sônia Pereira', lastActionDate: '2023-11-02', paymentStatus: 'Pendente', contractSignature: 'Pendente', documents: [{ name: 'Atualização Cadastral', status: DocumentStatus.PENDING, deliveryMethod: 'Pendente' }], reenrollmentFee: 0, unit: SchoolUnit.FILIAL },
-  { id: 204, name: 'Beatriz Almeida', avatar: generateAvatar('Beatriz Almeida'), currentGrade: '2º Ano C', nextGrade: '3º Ano C', status: ReEnrollmentStatus.DATA_VALIDATED, guardianName: 'Fernando Almeida', lastActionDate: '2023-11-08', paymentStatus: 'Pago', contractSignature: 'Pendente', documents: [], reenrollmentFee: 500, unit: SchoolUnit.FILIAL },
-  { id: 205, name: 'Enzo Rodrigues', avatar: generateAvatar('Enzo Rodrigues'), currentGrade: '1º Ano B', nextGrade: '2º Ano B', status: ReEnrollmentStatus.CONTRACT_ACCEPTED, guardianName: 'Juliana Rodrigues', lastActionDate: '2023-11-09', paymentStatus: 'Pago', contractSignature: 'Presencial', documents: [], reenrollmentFee: 500, unit: SchoolUnit.MATRIZ },
-  { id: 206, name: 'Valentina Santos', avatar: generateAvatar('Valentina Santos'), currentGrade: 'Infantil III', nextGrade: '1º Ano A', status: ReEnrollmentStatus.DECLINED, guardianName: 'Marcos Santos', lastActionDate: '2023-11-07', paymentStatus: 'Pendente', contractSignature: 'Pendente', documents: [], reenrollmentFee: 0, unit: SchoolUnit.MATRIZ },
-  { id: 207, name: 'Davi Ferreira', avatar: generateAvatar('Davi Ferreira'), currentGrade: '4º Ano A', nextGrade: '5º Ano A', status: ReEnrollmentStatus.PENDING_INVITE, guardianName: 'Patrícia Ferreira', lastActionDate: '2023-11-02', paymentStatus: 'Pendente', contractSignature: 'Pendente', documents: [], reenrollmentFee: 0, unit: SchoolUnit.ANEXO },
-];
 
 const StatusBadge: React.FC<{ status: ReEnrollmentStatus }> = ({ status }) => {
     const statusClasses = {
@@ -46,8 +32,28 @@ const KPICard: React.FC<{ title: string; value: string | number }> = ({ title, v
 );
 
 const ReEnrollmentCampaign: React.FC = () => {
+    const { enrolledStudents } = useEnrollment();
     const [isCampaignActive, setIsCampaignActive] = useState(false);
-    const [students, setStudents] = useState<ReEnrollingStudent[]>(MOCK_STUDENTS_LIST);
+    
+    // Transform EnrolledStudent to ReEnrollingStudent for this component's logic
+    const [students, setStudents] = useState<ReEnrollingStudent[]>(() => 
+        enrolledStudents.map(s => ({
+            id: s.id,
+            name: s.name,
+            avatar: s.avatar,
+            currentGrade: s.className,
+            nextGrade: `Próxima: ${s.grade}`, // Placeholder logic
+            status: ReEnrollmentStatus.PENDING_INVITE, // Initial status for campaign
+            guardianName: s.guardians?.[0]?.name || 'N/A',
+            lastActionDate: new Date().toISOString().split('T')[0],
+            paymentStatus: 'Pendente',
+            contractSignature: 'Pendente',
+            documents: [],
+            reenrollmentFee: 0,
+            unit: s.unit
+        }))
+    );
+    
     const [filter, setFilter] = useState<ReEnrollmentStatus | 'all'>('all');
     const [campaignText, setCampaignText] = useState("Prezados pais e responsáveis,\n\nÉ com grande alegria que anunciamos o início da nossa campanha de Pré-Matrícula para o ano letivo de 2025! Convidamos vocês a garantirem a vaga dos nossos queridos alunos para mais um ano de aprendizado e crescimento.\n\nAcesse o portal exclusivo através do link abaixo para validar os dados, anexar documentos e efetuar o pagamento da taxa de pré-matrícula de forma rápida e segura.\n\nContamos com vocês!");
     const [defaultFee, setDefaultFee] = useState(500);
@@ -129,7 +135,7 @@ const ReEnrollmentCampaign: React.FC = () => {
         return students.filter(s => s.status === ReEnrollmentStatus.PENDING_INVITE).length;
     }, [students]);
 
-    if (!isCampaignActive) {
+    if (!isCampaignActive && students.length > 0) {
         return (
             <>
                 <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800/50 p-8 rounded-xl border border-gray-200 dark:border-gray-700/50">
@@ -176,6 +182,14 @@ const ReEnrollmentCampaign: React.FC = () => {
                 )}
             </>
         );
+    }
+    
+    if (students.length === 0) {
+        return (
+            <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                <p>Nenhum aluno ativo encontrado para iniciar uma campanha de rematrícula.</p>
+            </div>
+        )
     }
 
     return (

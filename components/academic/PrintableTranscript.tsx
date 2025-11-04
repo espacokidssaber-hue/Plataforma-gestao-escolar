@@ -66,7 +66,6 @@ const PrintableTranscript: React.FC<StudentTranscriptData> = ({ student, schoolI
                 })}</tr>
                 <tr><td className="text-right font-bold">Carga Horária Anual</td>{levels.map(level => {
                     const historyEntry = academicHistory.find(h => h.gradeLevel.startsWith(level));
-                    // FIX: Explicitly type the accumulator in the reduce function to prevent `sum` from being inferred as `unknown`.
                     const totalWorkload = historyEntry ? Object.values(historyEntry.workload).reduce((sum: number, val) => sum + Number(val || 0), 0) : null;
                     return <React.Fragment key={level}><td colSpan={2} className="font-bold">{totalWorkload || '-'}</td></React.Fragment>
                 })}</tr>
@@ -81,7 +80,7 @@ const PrintableTranscript: React.FC<StudentTranscriptData> = ({ student, schoolI
     return (
         <div className="printable-transcript bg-white">
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <SchoolLogo logoUrl={schoolInfo.logo} className="w-20 h-20 object-contain mr-4" />
                 <div className="text-center flex-grow">
                     <h1 className="text-xl font-bold uppercase">{schoolInfo.name}</h1>

@@ -19,9 +19,9 @@ const PrintableEnrollmentForm: React.FC<PrintableEnrollmentFormProps> = ({ stude
     return (
         <div className="printable-enrollment-form bg-white">
             <table className="no-border print-avoid-break"><tbody><tr>
-                <td className="w-24 no-border align-middle">{schoolInfo.logo ? <img src={schoolInfo.logo} alt="Logo" className="w-24 h-24 object-contain"/> : <div className="w-24 h-24 bg-gray-200"></div>}</td>
-                <td className="text-center no-border align-middle"><h1 className="text-lg font-bold uppercase">{schoolInfo.name}</h1><p className="text-xs">{schoolInfo.address}</p><p className="text-xs">CNPJ: {schoolInfo.cnpj} | Telefone: {schoolInfo.phone}</p></td>
-                <td className="w-24 no-border align-middle"><div className="photo-box">Foto 3x4</div></td>
+                <td className="w-24 no-border align-top">{schoolInfo.logo ? <img src={schoolInfo.logo} alt="Logo" className="w-24 h-24 object-contain"/> : <div className="w-24 h-24 bg-gray-200"></div>}</td>
+                <td className="text-center no-border align-top"><h1 className="text-lg font-bold uppercase">{schoolInfo.name}</h1><p className="text-xs">{schoolInfo.address}</p><p className="text-xs">CNPJ: {schoolInfo.cnpj} | Telefone: {schoolInfo.phone}</p></td>
+                <td className="w-24 no-border align-top"><div className="photo-box">Foto 3x4</div></td>
             </tr></tbody></table>
 
             <h2 className="text-center font-bold text-lg my-2 print-avoid-break">FICHA DE MATRÍCULA - {new Date().getFullYear()}</h2>

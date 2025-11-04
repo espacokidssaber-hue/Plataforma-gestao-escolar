@@ -4,14 +4,6 @@ import AddExpenseModal from './AddExpenseModal';
 import MarkAsPaidModal from './MarkAsPaidModal';
 
 
-const MOCK_EXPENSES: Expense[] = [
-    { id: 2001, supplier: 'Equipe Pedagógica', category: 'Salários', description: 'Folha de Pagamento - Out/23', amount: 85000.00, dueDate: '2023-11-05', status: ExpenseStatus.PAID, paymentDate: '2023-11-04' },
-    { id: 2002, supplier: 'Imobiliária Central', category: 'Aluguel', description: 'Aluguel Prédio Principal', amount: 15000.00, dueDate: '2023-11-10', status: ExpenseStatus.PENDING },
-    { id: 2003, supplier: 'Fornecedor de Limpeza XYZ', category: 'Suprimentos', description: 'Material de Limpeza Mensal', amount: 1250.50, dueDate: '2023-10-28', status: ExpenseStatus.OVERDUE },
-    { id: 2004, supplier: 'Papelaria & Cia', category: 'Material de Escritório', description: 'Resmas de papel e toners', amount: 875.00, dueDate: '2023-11-15', status: ExpenseStatus.PENDING },
-];
-
-
 const StatusBadge: React.FC<{ status: ExpenseStatus }> = ({ status }) => {
     const statusClasses = {
         [ExpenseStatus.PAID]: 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300',
@@ -27,7 +19,7 @@ const StatusBadge: React.FC<{ status: ExpenseStatus }> = ({ status }) => {
 
 
 const AccountsPayable: React.FC = () => {
-    const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [filter, setFilter] = useState<ExpenseStatus | 'all'>('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isPaidModalOpen, setIsPaidModalOpen] = useState(false);
@@ -118,6 +110,9 @@ const AccountsPayable: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
+                 {filteredExpenses.length === 0 && (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma despesa encontrada para este filtro.</p>
+                 )}
             </div>
 
             {isAddModalOpen && (

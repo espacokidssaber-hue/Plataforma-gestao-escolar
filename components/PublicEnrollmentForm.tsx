@@ -77,7 +77,6 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
     const handleSubmit = () => {
         if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
             alert('Por favor, corrija os erros em todas as etapas antes de enviar.');
-            // Go to the first step with errors
             if (!validateStep(1)) setStep(1);
             else if (!validateStep(2)) setStep(2);
             else if (!validateStep(3)) setStep(3);
@@ -86,11 +85,20 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
 
         setIsSubmitting(true);
         setTimeout(() => {
-            const submittedDocs = Object.entries(documents).map(([name, docData]) => ({ name, fileUrl: (docData as { file: File; base64: string }).base64 }));
-            submitPublicEnrollment({ studentName, guardian, healthInfo, documents: submittedDocs });
-            setIsSubmitting(false);
-            setSubmitted(true);
-        }, 1500); // Simulate network request
+            try {
+                const submittedDocs = Object.entries(documents).map(([name, docData]) => ({ name, fileUrl: (docData as { file: File; base64: string }).base64 }));
+                submitPublicEnrollment({ studentName, guardian, healthInfo, documents: submittedDocs });
+                setSubmitted(true);
+            } catch (error) {
+                if (error instanceof Error) {
+                    alert(`Erro ao enviar matrícula:\n${error.message}`);
+                } else {
+                    alert('Ocorreu um erro desconhecido ao enviar a matrícula.');
+                }
+            } finally {
+                setIsSubmitting(false);
+            }
+        }, 1500);
     };
     
     const isStepValid = useMemo(() => validateStep(step), [step, studentName, guardian, documents, healthInfo]);

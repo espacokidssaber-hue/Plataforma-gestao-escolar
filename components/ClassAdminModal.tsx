@@ -7,7 +7,6 @@ interface ClassAdminModalProps {
   onSave: (schoolClass: SchoolClass) => void;
 }
 
-// FIX: Changed teacher IDs from strings to null to match the SchoolClass type.
 const initialFormState: Omit<SchoolClass, 'id' | 'students'> = {
     name: '',
     grade: '',
@@ -18,7 +17,6 @@ const initialFormState: Omit<SchoolClass, 'id' | 'students'> = {
     capacity: { matriz: 20, filial: 0, anexo: 0 },
 };
 
-// FIX: Updated teachers prop to accept number or null.
 interface UnitConfigProps {
     unit: 'matriz' | 'filial' | 'anexo';
     teachers: { matriz: number | null; filial: number | null; anexo: number | null; };
@@ -36,7 +34,6 @@ const UnitConfig: React.FC<UnitConfigProps> = ({ unit, teachers, capacity, onTea
                 type="text" 
                 id={`teacher-${unit}`} 
                 name={unit} 
-                // FIX: Handle null value for input by converting to empty string.
                 value={teachers[unit] ?? ''} 
                 onChange={onTeacherChange} 
                 className="w-full bg-white dark:bg-gray-700/80 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 transition" 
@@ -131,7 +128,6 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
     }));
   };
   
-  // FIX: Convert input value from string to number or null to match type.
   const handleTeacherChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const { name, value } = e.target;
       setFormData(prev => ({

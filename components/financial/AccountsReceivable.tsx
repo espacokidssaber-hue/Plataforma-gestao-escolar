@@ -2,23 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Invoice, InvoiceStatus, EnrolledStudent, StudentLifecycleStatus, SchoolUnit } from '../../types';
 import PaymentConfirmationModal from './PaymentConfirmationModal';
 import GenerateInvoicesModal from './GenerateInvoicesModal';
-
-const MOCK_INVOICES: Invoice[] = [
-    { id: 1001, studentId: 301, studentName: 'Alice Braga', description: 'Mensalidade Nov/23', amount: 1200.00, dueDate: '2023-11-05', status: InvoiceStatus.PAID, paymentMethod: 'PIX' },
-    { id: 1002, studentId: 302, studentName: 'Bento Ribeiro', description: 'Mensalidade Nov/23', amount: 1200.00, dueDate: '2023-11-05', status: InvoiceStatus.OVERDUE },
-    { id: 1003, studentId: 303, studentName: 'Clara Nunes', description: 'Mensalidade Nov/23', amount: 1140.00, dueDate: '2023-11-05', status: InvoiceStatus.PENDING },
-    { id: 1004, studentId: 304, studentName: 'Dante Oliveira', description: 'Mensalidade Nov/23', amount: 1200.00, dueDate: '2023-11-05', status: InvoiceStatus.PENDING },
-    { id: 1005, studentId: 302, studentName: 'Bento Ribeiro', description: 'Mensalidade Out/23', amount: 1200.00, dueDate: '2023-10-05', status: InvoiceStatus.PAID, paymentMethod: 'Comprovante', paymentReceiptUrl: 'data:application/pdf;base64,JVB...' },
-];
-
-// Mock list of students to generate invoices for
-// FIX: Add missing 'unit' property to MOCK_STUDENTS_FOR_INVOICING items to conform to the EnrolledStudent type.
-const MOCK_STUDENTS_FOR_INVOICING: EnrolledStudent[] = [
-    { id: 301, name: 'Alice Braga', grade: 'Infantil II', className: 'Infantil II A', classId: 1, unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
-    { id: 302, name: 'Bento Ribeiro', grade: '1º Ano', className: '1º Ano A', classId: 2, unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
-    { id: 303, name: 'Clara Nunes', grade: '2º Ano', className: '2º Ano B', classId: 3, unit: SchoolUnit.FILIAL, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
-    { id: 304, name: 'Dante Oliveira', grade: '1º Ano', className: '1º Ano A', classId: 2, unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', avatar:'' },
-];
+import { useEnrollment } from '../../contexts/EnrollmentContext';
 
 
 const StatusBadge: React.FC<{ status: InvoiceStatus }> = ({ status }) => {
@@ -36,7 +20,8 @@ const StatusBadge: React.FC<{ status: InvoiceStatus }> = ({ status }) => {
 
 
 const AccountsReceivable: React.FC = () => {
-    const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
+    const { enrolledStudents } = useEnrollment();
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [filter, setFilter] = useState<InvoiceStatus | 'all'>('all');
     const [invoiceToConfirm, setInvoiceToConfirm] = useState<Invoice | null>(null);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
@@ -50,10 +35,10 @@ const AccountsReceivable: React.FC = () => {
     const handleBulkGenerate = (config: { month: string, year: string, dueDate: string, baseAmount: number, description: string, applyDiscount: boolean, level: string }) => {
         const referencePeriod = `${config.month.slice(0, 3)}/${config.year.slice(2)}`;
         
-        let studentsToInvoice = MOCK_STUDENTS_FOR_INVOICING;
+        let studentsToInvoice = enrolledStudents;
 
         if (config.level !== 'all') {
-             studentsToInvoice = MOCK_STUDENTS_FOR_INVOICING.filter(student => {
+             studentsToInvoice = enrolledStudents.filter(student => {
                 if (config.level === 'infantil' && student.grade.toLowerCase().includes('infantil')) return true;
                 if (config.level === 'fundamental1' && ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano'].includes(student.grade)) return true;
                 // Add more levels if needed
@@ -159,10 +144,8 @@ const AccountsReceivable: React.FC = () => {
                         ))}
                     </tbody>
                 </table>
-                 {filteredInvoices.find(inv => inv.id === 1002 && inv.status === InvoiceStatus.OVERDUE) && (
-                     <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 rounded-lg text-sm text-yellow-800 dark:text-yellow-300">
-                         <p><span className="font-bold">Sugestão do Assistente Gemini:</span> A família de Bento Ribeiro tem um histórico de atrasos de 5-7 dias, mas sempre quita o valor integral. Sugerimos aguardar mais 2 dias antes de enviar um lembrete de cobrança automático para evitar desgaste no relacionamento.</p>
-                     </div>
+                 {filteredInvoices.length === 0 && (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma fatura encontrada para este filtro.</p>
                  )}
             </div>
             {invoiceToConfirm && (

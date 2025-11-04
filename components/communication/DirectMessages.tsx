@@ -10,32 +10,6 @@ const stringToColor = (str: string): string => { let hash = 0; if (!str) return 
 const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
 // --- AVATAR UTILS END ---
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-    {
-        id: 1,
-        contactName: 'Suporte Educbank (TESTE)',
-        contactAvatar: generateAvatar('Suporte Educbank'),
-        lastMessage: 'Olá! Esta é uma mensagem de teste para demonstrar a funcionalidade de mensagens diretas. Por favor, responda para confirmar o recebimento.',
-        unreadCount: 1,
-        phone: '5511999999999', // Example phone
-        messages: [
-            { id: 1, sender: 'contact', text: 'Olá! Esta é uma mensagem de teste para demonstrar a funcionalidade de mensagens diretas. Por favor, responda para confirmar o recebimento.', timestamp: 'Agora' },
-        ],
-    },
-    {
-        id: 2,
-        contactName: 'Carlos (pai de Dante Oliveira)',
-        contactAvatar: generateAvatar('Carlos Oliveira'),
-        lastMessage: 'Ok, obrigado pelo retorno!',
-        unreadCount: 0,
-        phone: '5511988888888', // Example phone
-        messages: [
-            { id: 1, sender: 'user', text: 'Bom dia, Carlos! Sim, o evento será no pátio principal a partir das 14h.', timestamp: '09:15' },
-            { id: 2, sender: 'contact', text: 'Ok, obrigado pelo retorno!', timestamp: '09:16' },
-        ],
-    },
-];
-
 const WhatsAppIcon: React.FC<{className?: string}> = ({className}) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" className={className}>
         <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 .9c48.4 0 93.2 18.7 127.6 53.2 34.4 34.4 53.2 79.2 53.2 127.6s-18.8 93.2-53.2 127.6c-34.4 34.4-79.2 53.2-127.6 53.2h-.1c-33.8 0-66.3-9.3-94-26.4l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5zm101.2 138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
@@ -60,12 +34,12 @@ const LightBulbIcon: React.FC<{className?: string}> = ({className}) => (
 
 
 const DirectMessages: React.FC = () => {
-    const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
     const [message, setMessage] = useState('');
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
-    const { contacts, addContacts } = useEnrollment();
+    const { contacts } = useEnrollment();
     const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
     const [aiTopic, setAiTopic] = useState('');
@@ -168,7 +142,7 @@ const DirectMessages: React.FC = () => {
                     <h2 className="text-lg font-bold text-gray-900 dark:text-white">Contatos</h2>
                 </header>
                 <div className="flex-grow overflow-y-auto">
-                    {conversations.map(convo => (
+                    {conversations.length > 0 ? conversations.map(convo => (
                         <button
                             key={convo.id}
                             onClick={() => setSelectedConversationId(convo.id)}
@@ -183,7 +157,9 @@ const DirectMessages: React.FC = () => {
                                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{convo.lastMessage}</p>
                             </div>
                         </button>
-                    ))}
+                    )) : (
+                        <p className="text-center text-gray-500 dark:text-gray-400 p-4">Nenhum contato encontrado.</p>
+                    )}
                 </div>
             </div>
 
@@ -199,125 +175,64 @@ const DirectMessages: React.FC = () => {
                                 <img src={selectedConversation.contactAvatar} alt={selectedConversation.contactName} className="w-12 h-12 rounded-full" />
                                 <div>
                                     <h3 className="font-bold text-lg text-gray-900 dark:text-white">{selectedConversation.contactName}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedConversation.phone || selectedConversation.email}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedConversation.phone}</p>
                                 </div>
                             </div>
                         </header>
-                        
-                        <div className="flex-grow flex flex-col justify-center items-center text-center p-4">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Compositor de Mensagens para WhatsApp</h2>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                                Esta ferramenta ajuda você a criar a mensagem perfeita. Use a IA para gerar textos, edite-os abaixo e clique em "Enviar via WhatsApp" para abrir o aplicativo com tudo pronto.
-                            </p>
-                            
-                            {selectedConversation.unreadCount > 0 && (
-                                <div className="mt-6 w-full max-w-lg bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-sm text-gray-600 dark:text-gray-300 mb-2">Contexto para Resposta (Última Mensagem Recebida):</h4>
-                                    <p className="text-sm text-gray-800 dark:text-white italic">"{selectedConversation.messages[selectedConversation.messages.length - 1].text}"</p>
+                        <div className="flex-grow">
+                            {/* Gemini AI Tools */}
+                            <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg my-4 space-y-3">
+                                <div className="flex items-center space-x-2">
+                                    <MagicWandIcon className="h-5 w-5 text-purple-500 dark:text-purple-400"/>
+                                    <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Gerar Mensagem com IA</h4>
                                 </div>
-                            )}
-
-                             <div className="mt-6 w-full max-w-lg bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700/50">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 text-left">Assistente de Redação IA</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label htmlFor="ai-topic" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 text-left">
-                                            Tópico para nova mensagem:
-                                        </label>
-                                        <input
-                                            id="ai-topic"
-                                            type="text"
-                                            value={aiTopic}
-                                            onChange={(e) => setAiTopic(e.target.value)}
-                                            placeholder="Ex: Lembrete da festa junina"
-                                            className="w-full bg-white dark:bg-gray-700/80 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-teal-500 focus:border-teal-500"
-                                        />
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleGenerateWithAI}
-                                            disabled={isGeneratingMessage || isSuggestingResponse || !aiTopic.trim()}
-                                            className="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-500 transition-colors disabled:bg-gray-500 flex items-center justify-center space-x-2"
-                                        >
-                                            {isGeneratingMessage ? (
-                                                <>
-                                                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                    <span>Gerando...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <MagicWandIcon className="h-5 w-5" />
-                                                    <span>Gerar Mensagem</span>
-                                                </>
-                                            )}
-                                        </button>
-                                        {selectedConversation.unreadCount > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={handleGeminiSuggestion}
-                                                disabled={isGeneratingMessage || isSuggestingResponse}
-                                                className="w-full px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-500 transition-colors disabled:bg-gray-500 flex items-center justify-center space-x-2"
-                                            >
-                                                {isSuggestingResponse ? (
-                                                    <>
-                                                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                        <span>Sugerindo...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <LightBulbIcon className="h-5 w-5" />
-                                                        <span>Sugerir Resposta</span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
-                             <label htmlFor="message-textarea" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Mensagem para Enviar:
-                            </label>
-                            <div className="relative">
-                                <textarea
-                                    id="message-textarea"
-                                    ref={messageTextareaRef}
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    rows={4}
-                                    placeholder="A mensagem gerada pela IA aparecerá aqui para você editar..."
-                                    className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 pr-20 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                                ></textarea>
-                                <div className="absolute top-2 right-2 flex flex-col space-y-1">
-                                    <button onClick={() => setIsEmojiPickerOpen(prev => !prev)} className="p-2 bg-gray-200 dark:bg-gray-600/50 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
-                                        <span role="img" aria-label="emoji picker">😊</span>
+                                <div className="flex items-center space-x-2">
+                                    <input type="text" value={aiTopic} onChange={e => setAiTopic(e.target.value)} placeholder="Digite um tópico. Ex: 'Lembrete sobre reunião de pais'" className="flex-grow bg-white dark:bg-gray-700/80 p-2 rounded-lg text-sm" />
+                                    <button onClick={handleGenerateWithAI} disabled={isGeneratingMessage} className="px-3 py-2 bg-purple-100 text-purple-700 dark:bg-purple-600/50 dark:text-purple-200 text-xs font-semibold rounded-md hover:bg-purple-200 w-24 text-center">
+                                        {isGeneratingMessage ? 'Gerando...' : 'Gerar'}
                                     </button>
                                 </div>
-                                {isEmojiPickerOpen && (
-                                    <div className="absolute bottom-12 right-2 z-10">
-                                        <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-                                    </div>
-                                )}
+                                 {selectedConversation.unreadCount > 0 && (
+                                     <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                                         <div className="flex items-center space-x-2">
+                                             <LightBulbIcon className="h-5 w-5 text-yellow-500 dark:text-yellow-400"/>
+                                             <h4 className="text-sm font-semibold text-gray-800 dark:text-white">Sugestão de Resposta</h4>
+                                         </div>
+                                         <button onClick={handleGeminiSuggestion} disabled={isSuggestingResponse} className="mt-2 text-xs text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-900/50 rounded-md p-2 w-full text-left hover:bg-yellow-200 dark:hover:bg-yellow-900">
+                                             {isSuggestingResponse ? 'Analisando...' : 'Clique para ver uma sugestão de resposta para a última mensagem recebida.'}
+                                         </button>
+                                     </div>
+                                 )}
                             </div>
-                            <div className="flex justify-end mt-2">
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={!message.trim()}
-                                    className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 disabled:bg-gray-500 flex items-center space-x-2"
-                                >
-                                    <WhatsAppIcon className="h-5 w-5" />
-                                    <span>Enviar via WhatsApp</span>
+                        </div>
+                        {/* Message Input */}
+                        <div className="relative mt-auto">
+                             <textarea
+                                ref={messageTextareaRef}
+                                value={message}
+                                onChange={e => setMessage(e.target.value)}
+                                placeholder="Digite sua mensagem aqui..."
+                                rows={4}
+                                className="w-full p-3 pr-24 bg-gray-100 dark:bg-gray-700/50 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition"
+                            />
+                            <div className="absolute bottom-2 right-2 flex items-center space-x-1">
+                                <button type="button" onClick={() => setIsEmojiPickerOpen(prev => !prev)} className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full">😊</button>
+                                <button onClick={handleSendMessage} className="p-2 bg-teal-500 text-white rounded-full hover:bg-teal-400">
+                                    <WhatsAppIcon className="h-6 w-6"/>
                                 </button>
                             </div>
+                             {isEmojiPickerOpen && (
+                                <div className="absolute bottom-14 right-0 z-10">
+                                    <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+                                </div>
+                            )}
                         </div>
                     </>
                 ) : (
-                    <div className="flex flex-col h-full items-center justify-center text-center">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Selecione um Contato</h2>
-                        <p className="text-gray-500 dark:text-gray-400">Escolha uma conversa na lista ao lado para começar.</p>
+                    <div className="h-full flex flex-col items-center justify-center text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                        <h3 className="mt-4 text-lg font-semibold text-gray-800 dark:text-white">Selecione um Contato</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Escolha um contato na lista ao lado para iniciar uma conversa.</p>
                     </div>
                 )}
             </div>
@@ -325,4 +240,5 @@ const DirectMessages: React.FC = () => {
     );
 };
 
+// FIX: Added default export
 export default DirectMessages;

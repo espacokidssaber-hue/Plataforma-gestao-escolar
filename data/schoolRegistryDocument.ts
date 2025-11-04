@@ -19,7 +19,6 @@ const HighlightedContent: React.FC<{ children: React.ReactNode; highlight?: stri
         if (Array.isArray(node)) {
             return node.map(highlightText);
         }
-        // FIX: Safely access props and children of React elements.
         if (React.isValidElement(node)) {
             const props = node.props as { children?: React.ReactNode; [key: string]: any };
             if (props.children) {

@@ -22,7 +22,7 @@ const StatusBadge: React.FC<{ status: NewEnrollmentStatus }> = ({ status }) => {
 
 
 const NewEnrollmentsWorkflow: React.FC = () => {
-    const { applicants, updateApplicant, highlightedApplicantId, setHighlightedApplicantId, addManualApplicant } = useEnrollment();
+    const { applicants, updateApplicant, highlightedApplicantId, setHighlightedApplicantId, addManualApplicant, finalizeEnrollment } = useEnrollment();
     const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
 
@@ -44,6 +44,11 @@ const NewEnrollmentsWorkflow: React.FC = () => {
     const handleSaveManual = (data: ManualEnrollmentData) => {
         addManualApplicant(data);
         setIsManualModalOpen(false);
+    };
+
+    const handleFinalize = (applicantToFinalize: Applicant) => {
+        finalizeEnrollment(applicantToFinalize);
+        setSelectedApplicant(null);
     };
 
     const activeApplicants = applicants.filter(a => a.status !== NewEnrollmentStatus.ENROLLED);
@@ -106,6 +111,7 @@ const NewEnrollmentsWorkflow: React.FC = () => {
                     applicant={selectedApplicant}
                     onClose={() => setSelectedApplicant(null)}
                     onSave={handleUpdateApplicant}
+                    onFinalize={handleFinalize}
                 />
             )}
             {isManualModalOpen && (

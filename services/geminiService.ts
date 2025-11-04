@@ -1,9 +1,52 @@
-import { Type, GenerateContentResponse } from "@google/genai";
+import { Type } from "@google/genai";
 import { EventData, EnrolledStudent, SchoolInfo } from '../types';
 
-// Helper para converter a resposta de stream do fetch em um gerador assíncrono,
-// mantendo a compatibilidade com componentes que usam 'for await...of'.
-const createStreamGenerator = async (response: Response) => {
+// ==================================================================================
+// FUNÇÃO CENTRAL DE COMUNICAÇÃO COM A API
+// Todas as chamadas para a IA agora passam por esta função robusta e centralizada.
+// ==================================================================================
+
+interface GeminiApiOptions {
+    prompt?: string;
+    stream?: boolean;
+    model?: string;
+    pdfBase64?: string;
+    schema?: any;
+}
+
+const callGeminiApi = async (options: GeminiApiOptions): Promise<Response> => {
+    try {
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(options),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: `Erro HTTP: ${response.status} - ${response.statusText}` }));
+            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
+        }
+        
+        return response;
+
+    } catch (error) {
+        console.error("Erro na função central callGeminiApi:", error);
+        if (error instanceof Error) {
+            throw new Error(`Falha na comunicação com o servidor da IA: ${error.message}`);
+        }
+        throw new Error("Falha desconhecida na comunicação com o servidor da IA.");
+    }
+};
+
+// ==================================================================================
+// FUNÇÕES DE SERVIÇO PÚBLICAS (Wrappers)
+// Estas são as funções que os componentes da aplicação usam.
+// Elas agora são simples, legíveis e apenas delegam a chamada para a função central.
+// ==================================================================================
+
+
+// Helper para converter a resposta de stream do fetch em um gerador assíncrono.
+const createStreamGenerator = (response: Response) => {
     if (!response.body) {
         throw new Error("A resposta da API não contém um corpo de fluxo.");
     }
@@ -16,83 +59,28 @@ const createStreamGenerator = async (response: Response) => {
         if (done) {
           break;
         }
-        // Simula a estrutura de resposta do SDK original ({ text: '...' }), que os componentes esperam.
+        // Simula a estrutura de resposta do SDK original ({ text: '...' }), que alguns componentes esperam.
         yield { text: decoder.decode(value) };
       }
     })();
 };
 
 export const streamMessage = async (message: string) => {
-  try {
-    const response = await fetch('/api/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: message, stream: true }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-    }
-    
-    if (!response.body) {
-        throw new Error("A resposta da API não contém um corpo de fluxo.");
-    }
-
-    return response.body.getReader();
-
-  } catch (error) {
-    console.error("Erro ao chamar a rota /api/gemini:", error);
-    if (error instanceof Error) {
-        throw new Error(`Falha ao se comunicar com o nosso servidor: ${error.message}`);
-    }
-    throw new Error("Falha ao se comunicar com o nosso servidor. Por favor, tente novamente mais tarde.");
+  const response = await callGeminiApi({ prompt: message, stream: true });
+  if (!response.body) {
+    throw new Error("A resposta da API não contém um corpo de fluxo.");
   }
+  return response.body.getReader();
 };
 
 export const streamDocumentText = async (prompt: string): Promise<AsyncGenerator<{ text: string }>> => {
-  try {
-    const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, stream: true }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-    }
-    
-    return createStreamGenerator(response) as any;
-
-  } catch (error) {
-    console.error("Error streaming text from Gemini via proxy:", error);
-    throw new Error("Falha ao obter resposta da IA.");
-  }
+  const response = await callGeminiApi({ prompt, stream: true });
+  return createStreamGenerator(response);
 };
 
-
 export const generateJsonFromText = async (prompt: string, schema: any) => {
-  try {
-    const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, schema, stream: false }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-    }
-    
-    // O backend já retorna o JSON puro quando um schema é usado.
-    return await response.json();
-  }
-  catch (error)
-  {
-    console.error("Error generating JSON from Gemini via proxy:", error);
-    throw new Error("Falha ao obter uma resposta JSON válida da IA.");
-  }
+  const response = await callGeminiApi({ prompt, schema, stream: false });
+  return await response.json();
 };
 
 
@@ -184,28 +172,15 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
     };
     
     try {
-        const response = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                schema,
-                pdfBase64,
-                model: 'gemini-2.5-pro',
-                stream: false
-            })
+        const response = await callGeminiApi({
+            prompt,
+            schema,
+            pdfBase64,
+            model: 'gemini-2.5-pro',
+            stream: false
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-        }
-
         const jsonText = await response.text();
-        if (!jsonText) {
-            return [];
-        }
-        return JSON.parse(jsonText);
+        return jsonText ? JSON.parse(jsonText) : [];
     } catch (error) {
         console.error("Error extracting students from PDF with Gemini via proxy:", error);
         throw new Error("A IA não conseguiu processar o arquivo PDF. Verifique se o formato é legível e contém os dados esperados.");
@@ -215,19 +190,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
 
 export const generateDocumentText = async (prompt: string): Promise<string> => {
   try {
-    const response = await fetch('/api/gemini', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt, stream: false }), // stream: false
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-    }
-    
+    const response = await callGeminiApi({ prompt, stream: false });
     const result = await response.json();
     const fullText = result.text;
     
@@ -237,9 +200,7 @@ export const generateDocumentText = async (prompt: string): Promise<string> => {
     return fullText;
   } catch (error) {
     console.error("Error generating document text from Gemini via proxy:", error);
-    if (error instanceof Error) {
-        throw new Error(`Falha ao se comunicar com o nosso servidor: ${error.message}`);
-    }
+    if (error instanceof Error) { throw error; }
     throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
 };
@@ -248,23 +209,13 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
     const prompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído.`;
     
     try {
-        const response = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                pdfBase64,
-                model: 'gemini-2.5-flash',
-                stream: true
-            })
+        const response = await callGeminiApi({
+            prompt,
+            pdfBase64,
+            model: 'gemini-2.5-flash',
+            stream: true
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-        }
-
-        return createStreamGenerator(response) as any;
+        return createStreamGenerator(response);
     } catch (error) {
         console.error("Error extracting text from PDF with Gemini via proxy:", error);
         throw new Error("A IA não conseguiu processar o arquivo PDF. Verifique se o arquivo não está corrompido ou protegido.");
@@ -314,23 +265,13 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
     };
     
     try {
-        const response = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                schema,
-                pdfBase64,
-                model: 'gemini-2.5-pro',
-                stream: false
-            })
+        const response = await callGeminiApi({
+            prompt,
+            schema,
+            pdfBase64,
+            model: 'gemini-2.5-pro',
+            stream: false
         });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-        }
-
         const jsonText = await response.text();
         return JSON.parse(jsonText);
     } catch (error) {
@@ -449,28 +390,16 @@ export const extractGradesFromPdf = async (pdfBase64: string, studentName: strin
     };
     
     try {
-        const response = await fetch('/api/gemini', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt,
-                schema,
-                pdfBase64,
-                model: 'gemini-2.5-pro',
-                stream: false
-            })
+        const response = await callGeminiApi({
+            prompt,
+            schema,
+            pdfBase64,
+            model: 'gemini-2.5-pro',
+            stream: false
         });
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
-        }
-
         const jsonText = await response.text();
-        if (!jsonText) {
-            return [];
-        }
-        return JSON.parse(jsonText);
+        return jsonText ? JSON.parse(jsonText) : [];
     } catch (error) {
         console.error("Error extracting grades from PDF with Gemini via proxy:", error);
         throw new Error("A IA não conseguiu processar o boletim em PDF. Verifique se o formato é legível e contém os dados esperados.");

@@ -2,9 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { MORNING_TIME_SLOTS, AFTERNOON_TIME_SLOTS, AllSchedules, Educator, EducatorStatus, ScheduleItem, ClassPeriod, DAYS_OF_WEEK, PrintData, SchoolUnit } from '../../types';
 import ScheduleItemModal from './ScheduleItemModal';
 import PrintableSchedule from './PrintableSchedule';
-import { MOCK_EDUCATORS } from '../../data/educatorsData';
-import { MOCK_CLASSES } from '../../data/classesData';
-import { MOCK_SCHEDULES_INITIAL_STATE } from '../../data/schedulesData';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
+
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;
@@ -62,6 +61,7 @@ const generateTimeSlots = (
 
 
 const Schedules: React.FC = () => {
+    const { classes } = useEnrollment(); // Using real classes from context
     const [viewMode, setViewMode] = useState<'class' | 'educator'>('class');
     const [activeShift, setActiveShift] = useState<ClassPeriod>(ClassPeriod.MORNING);
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -71,7 +71,7 @@ const Schedules: React.FC = () => {
     const [editingCellInfo, setEditingCellInfo] = useState<{ day: string; time: string; item?: ScheduleItem } | null>(null);
     
     // States for schedules and time slots
-    const [schedules, setSchedules] = useState<AllSchedules>(MOCK_SCHEDULES_INITIAL_STATE);
+    const [schedules, setSchedules] = useState<AllSchedules>({});
     const [morningTimeSlots, setMorningTimeSlots] = useState(() => JSON.parse(JSON.stringify(MORNING_TIME_SLOTS)));
     const [afternoonTimeSlots, setAfternoonTimeSlots] = useState(() => JSON.parse(JSON.stringify(AFTERNOON_TIME_SLOTS)));
 
@@ -93,6 +93,9 @@ const Schedules: React.FC = () => {
     const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
     const printMenuRef = useRef<HTMLDivElement>(null);
     
+    // NOTE: Educators are still mock as they are not in the EnrollmentContext
+    const [educators] = useState<Educator[]>([]); 
+    
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (printMenuRef.current && !printMenuRef.current.contains(event.target as Node)) {
@@ -105,8 +108,8 @@ const Schedules: React.FC = () => {
         };
     }, []);
 
-    const activeEducators = useMemo(() => MOCK_EDUCATORS.filter(e => e.status === EducatorStatus.ACTIVE), []);
-    const filteredClasses = useMemo(() => MOCK_CLASSES.filter(c => c.period === activeShift), [activeShift]);
+    const activeEducators = useMemo(() => educators.filter(e => e.status === EducatorStatus.ACTIVE), [educators]);
+    const filteredClasses = useMemo(() => classes.filter(c => c.period === activeShift), [classes, activeShift]);
     
     useEffect(() => {
         if (viewMode === 'class') {
@@ -137,7 +140,7 @@ const Schedules: React.FC = () => {
                         const classSchedule = schedules[classId as any];
                         const entry = classSchedule[day]?.[slot.start];
                         if (entry && entry.educatorId === educator.id) {
-                            const className = MOCK_CLASSES.find(c => c.id === parseInt(classId))?.name || 'Turma';
+                            const className = classes.find(c => c.id === parseInt(classId))?.name || 'Turma';
                             dailySchedule[slot.start] = { subject: entry.subject, className: className };
                             break;
                         }
@@ -150,9 +153,9 @@ const Schedules: React.FC = () => {
             schedulesByEducator[educator.id] = weeklySchedule;
         });
         return schedulesByEducator;
-    }, [activeEducators, schedules, allDayTimeSlots]);
+    }, [activeEducators, schedules, allDayTimeSlots, classes]);
 
-    const getEducatorName = (id: number) => MOCK_EDUCATORS.find(e => e.id === id)?.name || 'N/A';
+    const getEducatorName = (id: number) => educators.find(e => e.id === id)?.name || 'N/A';
     
     // Effect to regenerate time slots when optimizer values change
     useEffect(() => {
@@ -282,19 +285,19 @@ const Schedules: React.FC = () => {
     const handlePrintCurrent = () => {
         let dataToPrint: PrintData | null = null;
         if (viewMode === 'class' && selectedClassId) {
-            const currentClass = MOCK_CLASSES.find(c => c.id === selectedClassId);
+            const currentClass = classes.find(c => c.id === selectedClassId);
             if (currentClass) {
                 dataToPrint = {
                     type: 'class',
                     title: `Horário da Turma: ${currentClass.name}`,
                     schedules: { [selectedClassId]: schedules[selectedClassId] || {} },
-                    educators: MOCK_EDUCATORS,
+                    educators: educators,
                     classes: [currentClass],
                     timeSlots: activeShift === ClassPeriod.MORNING ? morningTimeSlots : afternoonTimeSlots,
                 };
             }
         } else if (viewMode === 'educator' && selectedEducatorId) {
-            const currentEducator = MOCK_EDUCATORS.find(e => e.id === selectedEducatorId);
+            const currentEducator = educators.find(e => e.id === selectedEducatorId);
             if (currentEducator) {
                  dataToPrint = {
                     type: 'educator',
@@ -318,8 +321,8 @@ const Schedules: React.FC = () => {
             type: 'general',
             title: 'Grade Geral de Horários da Instituição',
             schedules: schedules,
-            educators: MOCK_EDUCATORS,
-            classes: MOCK_CLASSES,
+            educators: educators,
+            classes: classes,
             timeSlots: [],
             allTimeSlots: allDayTimeSlots,
         };

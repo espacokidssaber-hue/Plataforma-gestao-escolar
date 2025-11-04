@@ -3,7 +3,8 @@ import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatu
 import { generateDocumentText } from '../services/geminiService';
 import PrintableDeclaration from './declarations/PrintableDeclaration';
 import ManageDeclarationTypesModal from './declarations/ManageDeclarationTypesModal';
-import { useSchoolInfo } from '../App';
+// FIX: Changed import path for useSchoolInfo from App.tsx to EnrollmentContext.tsx as it is exported from there.
+import { useSchoolInfo } from '../contexts/EnrollmentContext';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 
 const INITIAL_TEMPLATES: DeclarationTemplate[] = [
@@ -136,68 +137,70 @@ const Declarations: React.FC = () => {
     };
 
     return (
-        <div className="no-print">
-            <header className="mb-6 flex justify-between items-start">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gerador de Declarações</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Crie documentos oficiais com a ajuda do Gemini.</p>
-                </div>
-            </header>
+        <>
+            <div className="no-print">
+                <header className="mb-6 flex justify-between items-start">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gerador de Declarações</h1>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">Crie documentos oficiais com a ajuda do Gemini.</p>
+                    </div>
+                </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Coluna de Controles */}
-                <div className="lg:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700/50">
-                        <h2 className="font-bold text-lg text-gray-900 dark:text-white mb-2">1. Seleção de Dados</h2>
-                        <div className="space-y-3">
-                            <div>
-                                <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aluno</label>
-                                <select id="student-select" value={selectedStudentId ?? ''} onChange={e => setSelectedStudentId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
-                                    <option value="">Selecione um aluno...</option>
-                                    {enrolledStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Declaração</label>
-                                <select id="template-select" value={selectedTemplateId ?? ''} onChange={e => setSelectedTemplateId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
-                                    <option value="">Selecione...</option>
-                                    {declarationTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                                <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-teal-600 dark:text-teal-400 hover:underline mt-1">Gerenciar tipos</button>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Coluna de Controles */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700/50">
+                            <h2 className="font-bold text-lg text-gray-900 dark:text-white mb-2">1. Seleção de Dados</h2>
+                            <div className="space-y-3">
+                                <div>
+                                    <label htmlFor="student-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Aluno</label>
+                                    <select id="student-select" value={selectedStudentId ?? ''} onChange={e => setSelectedStudentId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
+                                        <option value="">Selecione um aluno...</option>
+                                        {enrolledStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Declaração</label>
+                                    <select id="template-select" value={selectedTemplateId ?? ''} onChange={e => setSelectedTemplateId(Number(e.target.value))} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
+                                        <option value="">Selecione...</option>
+                                        {declarationTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    </select>
+                                    <button onClick={() => setIsManageTypesModalOpen(true)} className="text-xs text-teal-600 dark:text-teal-400 hover:underline mt-1">Gerenciar tipos</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                     <button onClick={handleGenerate} disabled={isGenerating || !selectedStudentId || !selectedTemplateId} className="w-full flex items-center justify-center px-4 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-500">
-                        {isGenerating && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                        {isGenerating ? 'Gerando...' : '2. Gerar Documento com IA'}
-                    </button>
-                </div>
-
-                {/* Coluna de Visualização */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização</h2>
-                        <button onClick={handlePrint} disabled={!generatedText} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
-                            Imprimir
+                        <button onClick={handleGenerate} disabled={isGenerating || !selectedStudentId || !selectedTemplateId} className="w-full flex items-center justify-center px-4 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-500">
+                            {isGenerating && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                            {isGenerating ? 'Gerando...' : '2. Gerar Documento com IA'}
                         </button>
                     </div>
-                    <div className="flex-grow bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
-                        <textarea 
-                            value={generatedText}
-                            onChange={e => setGeneratedText(e.target.value)}
-                            className="w-full h-full bg-transparent text-gray-800 dark:text-gray-200 resize-none focus:outline-none"
-                            placeholder="O texto da declaração gerada aparecerá aqui..."
-                        />
+
+                    {/* Coluna de Visualização */}
+                    <div className="lg:col-span-2 bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-col">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pré-visualização</h2>
+                            <button onClick={handlePrint} disabled={!generatedText} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-500">
+                                Imprimir
+                            </button>
+                        </div>
+                        <div className="flex-grow bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
+                            <textarea 
+                                value={generatedText}
+                                onChange={e => setGeneratedText(e.target.value)}
+                                className="w-full h-full bg-transparent text-gray-800 dark:text-gray-200 resize-none focus:outline-none"
+                                placeholder="O texto da declaração gerada aparecerá aqui..."
+                            />
+                        </div>
                     </div>
                 </div>
+
+                {isManageTypesModalOpen && <ManageDeclarationTypesModal templates={declarationTemplates} onClose={() => setIsManageTypesModalOpen(false)} onSave={handleSaveTemplates} />}
             </div>
 
-            {isManageTypesModalOpen && <ManageDeclarationTypesModal templates={declarationTemplates} onClose={() => setIsManageTypesModalOpen(false)} onSave={handleSaveTemplates} />}
-            
             <div className="print-container">
                 {printContent && <PrintableDeclaration {...printContent} />}
             </div>
-        </div>
+        </>
     );
 };
 

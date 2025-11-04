@@ -85,7 +85,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ setActiveSubView, set
         if (data.id && classes.some(c => c.id === data.id)) {
             updateSchoolClass(data);
         } else {
-            addSchoolClass(data);
+            addSchoolClass(data as Omit<SchoolClass, 'id' | 'students'>);
         }
         setIsModalOpen(false);
     };
