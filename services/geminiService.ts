@@ -230,28 +230,40 @@ export const generateDocumentText = async (prompt: string, pdfBase64?: string): 
       model: pdfBase64 ? 'gemini-2.5-flash' : undefined,
     });
     
-    // Handle cases where the response might be successful but empty, which would cause .json() to fail.
     const responseBody = await response.text();
     if (!responseBody) {
-        if (pdfBase64) return ""; // Gracefully handle empty response for PDF.
+        if (pdfBase64) return "";
         throw new Error("A IA retornou uma resposta vazia.");
     }
 
-    const result = JSON.parse(responseBody);
-    const fullText = result.text ?? '';
+    let fullText = '';
+    try {
+        // A API deve retornar um JSON { "text": "..." }
+        const result = JSON.parse(responseBody);
+        fullText = result.text ?? '';
+    } catch (e) {
+        // Se a análise JSON falhar (ex: a API retornou um erro de texto simples com status 200),
+        // trate como se nenhum texto pudesse ser extraído do PDF para evitar um erro grave.
+        console.warn("Falha ao analisar JSON da API, tratando a resposta como texto puro. Resposta:", responseBody);
+        if (pdfBase64) {
+            return ""; // Trata como se o PDF fosse ilegível.
+        }
+        // Para outras tarefas, podemos assumir que a resposta inteira é o texto.
+        fullText = responseBody;
+    }
     
     if (!fullText.trim()) {
         if (pdfBase64) {
-             // This is the desired outcome for an unreadable PDF (e.g., image-only).
+             // Este é o resultado desejado para um PDF ilegível (ex: somente imagem).
              return "";
         }
-        // For non-PDF tasks, an empty text is an error.
+        // Para tarefas que não são de PDF, um texto vazio é um erro.
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
     }
     return fullText;
   } catch (error) {
     console.error("Error generating document text from Gemini via proxy:", error);
-    // The calling function (extractEnrolledStudentsFromPdf) will catch this and show the user-facing error.
+    // A função chamadora (extractEnrolledStudentsFromPdf) irá capturar isso e mostrar o erro para o usuário.
     if (error instanceof Error) { throw error; }
     throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
