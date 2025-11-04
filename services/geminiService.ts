@@ -104,7 +104,6 @@ export interface ExtractedStudent {
 }
 
 export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise<ExtractedStudent[]> => {
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos de um relatório de matrículas em PDF.**
 
@@ -206,7 +205,6 @@ export const generateDocumentText = async (prompt: string): Promise<string> => {
 };
 
 export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerator<{ text: string }>> => {
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído.`;
     
     try {
@@ -225,7 +223,6 @@ export const streamTextFromPdf = async (pdfBase64: string): Promise<AsyncGenerat
 
 
 export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{ year: number, month: number, events: EventData[] }[]> => {
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
       Você é um assistente de secretaria escolar altamente preciso e meticuloso. Sua tarefa é analisar o calendário escolar em PDF fornecido e extrair CADA evento, sem deixar NENHUM de fora.
 
@@ -275,7 +272,6 @@ export const extractCalendarEventsFromPdf = async (pdfBase64: string): Promise<{
             stream: false
         });
         const jsonText = await response.text();
-        // FIX: Added a check for empty jsonText to avoid JSON.parse error.
         return jsonText ? JSON.parse(jsonText) : [];
     } catch (error) {
         console.error("Error parsing calendar from PDF with Gemini via proxy:", error);
@@ -288,19 +284,16 @@ export const fillContractWithData = async (contractText: string, student: Enroll
     const address = student.address;
     const studentAddress = student.address;
 
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const guardianAddressString = address 
         ? `${address.street}, ${address.number}${address.complement ? `, ${address.complement}` : ''}, ${address.neighborhood}, ${address.city}-${address.state}, CEP: ${address.zip}`
         : 'Não informado';
     
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const studentAddressString = studentAddress
         ? `${studentAddress.street}, ${studentAddress.number}${studentAddress.complement ? `, ${studentAddress.complement}` : ''}, ${studentAddress.neighborhood}, ${studentAddress.city}-${studentAddress.state}, CEP: ${studentAddress.zip}`
         : 'Não informado';
     
     const totalAnnualCost = (student.enrollmentFee || 0) + ((student.monthlyFee || 0) * 11);
 
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         Você é um assistente de secretaria que preenche contratos. Sua tarefa é substituir os placeholders (ex: [NOME_ALUNO]) em um modelo de contrato com os dados fornecidos.
 
@@ -345,7 +338,6 @@ export const generateEducatorObservation = async (studentName: string, grades: a
         })
         .join('; ');
 
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         Aja como um(a) educador(a) experiente e atencioso(a).
         Sua tarefa é escrever um parágrafo de observação pedagógica sobre o(a) aluno(a) ${studentName}, 
@@ -370,7 +362,6 @@ export interface ExtractedGrade {
 }
 
 export const extractGradesFromPdf = async (pdfBase64: string, studentName: string): Promise<ExtractedGrade[]> => {
-    // FIX: Corrected invalid template literal syntax by removing escaping backslash.
     const prompt = `
         Analise o documento PDF fornecido, que é um boletim escolar do aluno(a) ${studentName}.
         Para cada disciplina listada no boletim, extraia CADA avaliação (como "Prova 1", "Trabalho", "Média 1º Bimestre", "Nota Final", etc.) e sua respectiva nota numérica.
