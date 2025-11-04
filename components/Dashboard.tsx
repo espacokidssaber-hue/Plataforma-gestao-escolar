@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNotification } from '../contexts/NotificationContext';
-import { NotificationType } from '../types';
+import { LeadStatus, NotificationType, StudentLifecycleStatus, NewEnrollmentStatus } from '../types';
 import DailyChecklist from './dashboard/DailyChecklist';
 import SystemTasks from './dashboard/SystemTasks';
 import AnnualTasks from './dashboard/AnnualTasks';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 
 const KPICard: React.FC<{ title: string; value: string; change?: string; changeType?: 'increase' | 'decrease' }> = ({ title, value, change, changeType }) => {
     const changeColor = changeType === 'increase' ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400';
@@ -27,25 +28,49 @@ const KPICard: React.FC<{ title: string; value: string; change?: string; changeT
 
 const Dashboard: React.FC = () => {
     const { notifications } = useNotification();
+    const { enrolledStudents, leads, classes, applicants } = useEnrollment();
 
     const unreadEnrollmentNotifications = notifications.filter(
         n => n.type === NotificationType.ENROLLMENT && !n.isRead
     ).length;
+
+    // Calculate real data for KPIs
+    const activeStudentsCount = enrolledStudents.filter(s => s.status === StudentLifecycleStatus.ACTIVE).length;
+    const newLeadsCount = leads.filter(l => l.status === LeadStatus.NEW).length;
+    const pendingFinancialCount = enrolledStudents.filter(s => s.financialStatus === 'Pendente').length;
     
-    // Mock data for other tasks
-    const pendingDocsCount = 5;
-    const assessmentsToGradeCount = 1;
-    const overdueInvoicesCount = 3;
-    const birthdaysTodayCount = 3;
+    const totalCapacity = classes.reduce((acc, c) => {
+        const capacity = (c.capacity?.matriz || 0) + (c.capacity?.filial || 0) + (c.capacity?.anexo || 0);
+        return acc + capacity;
+    }, 0);
+    const availableSpots = Math.max(0, totalCapacity - activeStudentsCount);
+
+    // Calculate real data for "Meu Dia" tasks
+    const pendingDocsCount = applicants.filter(
+        a => a.status === NewEnrollmentStatus.PENDING_ANALYSIS
+    ).length;
+    
+    // Placeholder until a real data source for assessments is implemented
+    const assessmentsToGradeCount = 0; 
+
+    const today = new Date();
+    const todayMonthDay = `${today.getMonth() + 1}-${today.getDate()}`;
+    const birthdaysTodayCount = enrolledStudents.filter(s => {
+        if (!s.dateOfBirth) return false;
+        // Adding 'T00:00:00' ensures the date is parsed in the local timezone, avoiding UTC conversion issues.
+        const dob = new Date(s.dateOfBirth + 'T00:00:00'); 
+        const studentMonthDay = `${dob.getMonth() + 1}-${dob.getDate()}`;
+        return studentMonthDay === todayMonthDay;
+    }).length;
 
 
     return (
         <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <KPICard title="Alunos Matriculados" value="487" change="+5 este mês" changeType="increase" />
-                <KPICard title="Novos Leads" value="23" change="+12% vs. semana passada" changeType="increase" />
-                <KPICard title="Inadimplência" value="3.4%" change="-0.5% vs. mês passado" changeType="decrease" />
-                <KPICard title="Vagas Disponíveis" value="13" />
+                <KPICard title="Alunos Ativos" value={activeStudentsCount.toString()} />
+                <KPICard title="Novos Leads (Funil)" value={newLeadsCount.toString()} />
+                <KPICard title="Pendências Financeiras" value={pendingFinancialCount.toString()} />
+                <KPICard title="Vagas Disponíveis" value={availableSpots.toString()} />
             </div>
 
             <div className="bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50">
@@ -56,7 +81,7 @@ const Dashboard: React.FC = () => {
                         unreadEnrollmentCount={unreadEnrollmentNotifications}
                         pendingDocsCount={pendingDocsCount}
                         assessmentsToGradeCount={assessmentsToGradeCount}
-                        overdueInvoicesCount={overdueInvoicesCount}
+                        overdueInvoicesCount={pendingFinancialCount}
                         birthdaysTodayCount={birthdaysTodayCount}
                     />
                     {/* Seção de Checklists */}

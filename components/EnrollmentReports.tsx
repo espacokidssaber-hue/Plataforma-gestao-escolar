@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
+// FIX: Added 'NewEnrollmentStatus' to the import from '../types' to resolve a reference error.
+import { LeadStatus, StudentLifecycleStatus, SchoolClass, EnrolledStudent, NewEnrollmentStatus } from '../types';
 
 // --- Reusable Chart & UI Components ---
 
@@ -18,7 +21,7 @@ const Widget: React.FC<{ title: string; children: React.ReactNode; flexCol?: boo
 );
 
 const KPIGauge: React.FC<{ value: number; max: number; label: string }> = ({ value, max, label }) => {
-    const percentage = (value / max) * 100;
+    const percentage = max > 0 ? (value / max) * 100 : 0;
     const circumference = 2 * Math.PI * 45; // 2 * pi * r
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
@@ -57,7 +60,7 @@ const DonutChart: React.FC<{ data: { label: string; value: number; color: string
             <div className="relative w-40 h-40">
                 <svg viewBox="0 0 36 36" className="w-full h-full">
                     {data.map((item, index) => {
-                        const percentage = (item.value / total) * 100;
+                        const percentage = total > 0 ? (item.value / total) * 100 : 0;
                         const offset = cumulative;
                         cumulative += percentage;
                         return (
@@ -93,7 +96,7 @@ const DonutChart: React.FC<{ data: { label: string; value: number; color: string
 };
 
 const BarChart: React.FC<{ data: { label: string; value: number }[], color: string }> = ({ data, color }) => {
-    const max = Math.max(...data.map(d => d.value));
+    const max = Math.max(...data.map(d => d.value), 1); // Avoid division by zero
     return (
         <div className="flex justify-around items-end h-full pt-4">
             {data.map(item => (
@@ -133,32 +136,6 @@ const FunnelChart: React.FC<{ data: { label: string; value: number }[] }> = ({ d
     );
 };
 
-
-// --- New mock data for the occupancy report ---
-const MOCK_CLASSES_FOR_REPORT = [
-    { id: 1, name: 'Infantil II A', grade: 'Infantil II', period: 'Manhã', capacity: { matriz: 15, filial: 5, anexo: 0 }, students: Array(18).fill(null) },
-    { id: 2, name: '1º Ano A', grade: '1º Ano', period: 'Manhã', capacity: { matriz: 25, filial: 0, anexo: 0 }, students: Array(25).fill(null) },
-    { id: 3, name: '2º Ano B', grade: '2º Ano', period: 'Tarde', capacity: { matriz: 20, filial: 5, anexo: 0 }, students: Array(23).fill(null) },
-    { id: 4, name: '3º Ano A', grade: '3º Ano', period: 'Manhã', capacity: { matriz: 25, filial: 0, anexo: 0 }, students: Array(20).fill(null) },
-    { id: 5, name: 'Infantil III B', grade: 'Infantil III', period: 'Tarde', capacity: { matriz: 20, filial: 0, anexo: 0 }, students: Array(20).fill(null) },
-];
-
-const MOCK_WAITING_LISTS = {
-    1: [], // Infantil II A - no waiting list
-    2: [ // 1º Ano A - full, has waiting list
-        { studentId: 901, studentName: 'Fernanda Lima' },
-        { studentId: 902, studentName: 'Rodrigo Hilbert' },
-    ],
-    3: [], // 2º Ano B - has space
-    4: [], // 3º Ano A - has space
-    5: [ // Infantil III B - full, has waiting list
-        { studentId: 903, studentName: 'Angélica Ksyvickis' },
-    ]
-};
-
-
-// --- New component for the occupancy report ---
-
 const ProgressBar: React.FC<{ percentage: number }> = ({ percentage }) => {
     let bgColor = 'bg-green-500';
     if (percentage > 80) bgColor = 'bg-yellow-500';
@@ -171,10 +148,9 @@ const ProgressBar: React.FC<{ percentage: number }> = ({ percentage }) => {
     );
 };
 
-
-const ClassOccupancyReport: React.FC = () => {
+const ClassOccupancyReport: React.FC<{ classes: SchoolClass[]; enrolledStudents: EnrolledStudent[] }> = ({ classes, enrolledStudents }) => {
     return (
-        <Widget title="Relatório de Ocupação de Turmas e Fila de Espera">
+        <Widget title="Relatório de Ocupação de Turmas">
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>
@@ -182,17 +158,14 @@ const ClassOccupancyReport: React.FC = () => {
                             <th className="p-3">Turma</th>
                             <th className="p-3 text-center">Vagas (Ocup/Total)</th>
                             <th className="p-3 w-1/4">Ocupação</th>
-                            <th className="p-3 text-center">Fila de Espera</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {MOCK_CLASSES_FOR_REPORT.map(c => {
-                            const occupied = c.students.length;
-                            const totalCapacity = c.capacity.matriz + c.capacity.filial + c.capacity.anexo;
+                        {classes.map(c => {
+                            const occupied = enrolledStudents.filter(s => s.classId === c.id).length;
+                            const totalCapacity = (c.capacity?.matriz || 0) + (c.capacity?.filial || 0) + (c.capacity?.anexo || 0);
                             const percentage = totalCapacity > 0 ? (occupied / totalCapacity) * 100 : 0;
-                            const waitingList = MOCK_WAITING_LISTS[c.id as keyof typeof MOCK_WAITING_LISTS] || [];
-                            const waitingListNames = waitingList.map(s => s.studentName).join(', ');
-
+                            
                             return (
                                 <tr key={c.id} className="border-b border-gray-200 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/20">
                                     <td className="p-3">
@@ -208,18 +181,6 @@ const ClassOccupancyReport: React.FC = () => {
                                             <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{percentage.toFixed(0)}%</span>
                                         </div>
                                     </td>
-                                    <td className="p-3 text-center">
-                                        {waitingList.length > 0 ? (
-                                            <span 
-                                                className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 cursor-help"
-                                                title={`Alunos na fila: ${waitingListNames}`}
-                                            >
-                                                {waitingList.length} aluno(s)
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-gray-400">-</span>
-                                        )}
-                                    </td>
                                 </tr>
                             )
                         })}
@@ -231,32 +192,41 @@ const ClassOccupancyReport: React.FC = () => {
 };
 
 
-// --- Main Component ---
-
 export const EnrollmentReports: React.FC = () => {
-    // Mock data for charts
+    const { enrolledStudents, leads, classes, applicants } = useEnrollment();
+
+    // Calculate real data for charts
+    const activeStudentsCount = enrolledStudents.filter(s => s.status === StudentLifecycleStatus.ACTIVE).length;
+    const pendingApplicantsCount = applicants.filter(a => a.status !== NewEnrollmentStatus.ENROLLED).length;
+    
+    const totalCapacity = classes.reduce((sum, cls) => {
+        const capacity = (cls.capacity?.matriz || 0) + (cls.capacity?.filial || 0) + (cls.capacity?.anexo || 0);
+        return sum + capacity;
+    }, 0);
+    
     const compositionData = [
-        { label: 'Novos Alunos', value: 120, color: '#14b8a6' },
-        { label: 'Pré-Matrículas', value: 367, color: '#2dd4bf' }
-    ];
-    const funnelData = [
-        { label: 'Leads', value: 185 },
-        { label: 'Visitou', value: 95 },
-        { label: 'Negociação', value: 68 },
-        { label: 'Matriculado', value: 42 }
-    ];
-    const channelData = [
-        { label: 'Indicação', value: 45 },
-        { label: 'Google', value: 35 },
-        { label: 'Instagram', value: 28 },
-        { label: 'Fachada', value: 12 }
-    ];
-    const evasionData = [
-        { label: 'Mudança', value: 5 },
-        { label: 'Financeiro', value: 8 },
-        { label: 'Pedagógico', value: 2 },
+        { label: 'Alunos Matriculados', value: activeStudentsCount, color: '#14b8a6' },
+        { label: 'Candidatos na Fila', value: pendingApplicantsCount, color: '#2dd4bf' }
     ];
 
+    const funnelData = [
+        { label: 'Leads', value: leads.length },
+        { label: 'Visitou', value: leads.filter(l => [LeadStatus.VISIT_SCHEDULED, LeadStatus.NEGOTIATION, LeadStatus.ENROLLMENT_INVITED, LeadStatus.WON].includes(l.status)).length },
+        { label: 'Negociação', value: leads.filter(l => [LeadStatus.NEGOTIATION, LeadStatus.ENROLLMENT_INVITED, LeadStatus.WON].includes(l.status)).length },
+        { label: 'Convertido', value: leads.filter(l => l.status === LeadStatus.WON).length }
+    ];
+
+    const churnCount = enrolledStudents.filter(s => s.status === StudentLifecycleStatus.TRANSFERRED_OUT || s.status === StudentLifecycleStatus.CANCELLED).length;
+
+    const channelData = useMemo(() => {
+        const sources = leads.reduce((acc, lead) => {
+            const source = lead.source || 'Desconhecida';
+            acc[source] = (acc[source] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+        return Object.entries(sources).map(([label, value]) => ({ label, value }));
+    }, [leads]);
+    
     return (
         <div className="mt-6 space-y-8">
             <header className="flex flex-wrap items-center justify-between gap-4">
@@ -278,21 +248,20 @@ export const EnrollmentReports: React.FC = () => {
 
             {/* --- KPIs Section --- */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-                <Widget title="Ocupação Total"><KPIGauge value={487} max={500} label="Alunos" /></Widget>
+                <Widget title="Ocupação Total"><KPIGauge value={activeStudentsCount} max={totalCapacity} label="Alunos" /></Widget>
                 <Widget title="Composição"><DonutChart data={compositionData} /></Widget>
                 <Widget title="Funil de Captação"><FunnelChart data={funnelData} /></Widget>
                 <Widget title="Taxa de Evasão (Churn)" flexCol>
                     <div className="text-center flex-grow flex flex-col justify-center">
-                        <p className="text-5xl font-bold text-red-500 dark:text-red-400">15</p>
+                        <p className="text-5xl font-bold text-red-500 dark:text-red-400">{churnCount}</p>
                         <p className="text-gray-500 dark:text-gray-400">Alunos perdidos no ano</p>
                     </div>
                 </Widget>
             </div>
 
             {/* --- Growth & Churn Analysis --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Widget title="Eficácia de Canal (Novas Matrículas)"><BarChart data={channelData} color="#14b8a6" /></Widget>
-                <Widget title="Análise de Evasão (Motivos)"><BarChart data={evasionData} color="#f87171" /></Widget>
+            <div className="grid grid-cols-1 gap-6">
+                <Widget title="Eficácia de Canal (Novos Leads)"><BarChart data={channelData} color="#14b8a6" /></Widget>
             </div>
 
              {/* --- Operational Reports --- */}
@@ -336,7 +305,7 @@ export const EnrollmentReports: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                    <ClassOccupancyReport />
+                    <ClassOccupancyReport classes={classes} enrolledStudents={enrolledStudents} />
                  </div>
             </div>
         </div>

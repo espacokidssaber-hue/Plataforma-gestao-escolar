@@ -6,7 +6,6 @@ import {
     DocumentStatus, SchoolUnit
 } from '../types';
 import { MOCK_SUBJECTS } from '../data/subjectsData';
-import { MOCK_CLASS_LOGS } from '../data/classLogsData';
 
 // ==================================================================================
 // DATA VERSIONING AND MIGRATION
@@ -85,13 +84,14 @@ const getInitialData = (): AppData => {
 // --- AVATAR UTILS START ---
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
 const stringToColor = (str: string): string => { let hash = 0; if (!str) return '#cccccc'; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); hash = hash & hash; } let color = '#'; for (let i = 0; i < 3; i++) { const value = (hash >> (i * 8)) & 0xFF; const adjustedValue = 100 + (value % 156); color += ('00' + adjustedValue.toString(16)).substr(-2); } return color; };
-const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
+const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
 // --- AVATAR UTILS END ---
 
 
 interface EnrollmentContextType {
     schoolInfo: SchoolInfo;
     matrizInfo: SchoolInfo | null;
+    updateSchoolInfo: (newInfo: Partial<SchoolInfo>) => void;
     enrolledStudents: EnrolledStudent[];
     updateEnrolledStudent: (student: EnrolledStudent) => void;
     enrollStudentsFromImport: (students: EnrolledStudent[]) => void;
@@ -141,6 +141,13 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
     const [highlightedApplicantId, setHighlightedApplicantId] = useState<number | null>(null);
 
     // --- State Update Functions ---
+    const updateSchoolInfo = (newInfo: Partial<SchoolInfo>) => {
+        setAppData(prev => ({
+            ...prev,
+            schoolInfo: { ...prev.schoolInfo, ...newInfo }
+        }));
+    };
+    
     const updateEnrolledStudent = (student: EnrolledStudent) => setAppData(prev => ({ ...prev, enrolledStudents: prev.enrolledStudents.map(s => s.id === student.id ? student : s) }));
     
     const enrollStudentsFromImport = (newStudents: EnrolledStudent[]) => {
@@ -279,6 +286,7 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
 
     const value = {
         ...appData,
+        updateSchoolInfo,
         updateEnrolledStudent, enrollStudentsFromImport, addSchoolClass, updateSchoolClass, addLead, updateLead,
         convertLeadToApplicant, addManualApplicant, submitPublicEnrollment, updateApplicant, finalizeEnrollment,
         highlightedApplicantId, setHighlightedApplicantId, addExtemporaneousApplicant, addContacts,
