@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 // FIX: Added 'NewEnrollmentStatus' to the import from '../types' to resolve a reference error.
 import { LeadStatus, StudentLifecycleStatus, SchoolClass, EnrolledStudent, NewEnrollmentStatus } from '../types';
 
