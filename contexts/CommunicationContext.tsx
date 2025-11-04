@@ -24,9 +24,9 @@ export const CommunicationProvider: React.FC<{ children: ReactNode }> = ({ child
         }
     });
 
-    useEffect(() => {
-        localStorage.setItem('internal_communications', JSON.stringify(conversations));
-    }, [conversations]);
+    // useEffect(() => {
+    //     localStorage.setItem('internal_communications', JSON.stringify(conversations));
+    // }, [conversations]);
 
     const filteredConversations = useMemo(() => {
         if (!currentUser) return [];

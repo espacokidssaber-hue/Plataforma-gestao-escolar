@@ -119,13 +119,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [user]);
 
-    useEffect(() => {
-        const versionedData = {
-            version: CURRENT_AUTH_VERSION,
-            data: { users, passwords }
-        };
-        localStorage.setItem('auth_data', JSON.stringify(versionedData));
-    }, [users, passwords]);
+    // useEffect(() => {
+    //     const versionedData = {
+    //         version: CURRENT_AUTH_VERSION,
+    //         data: { users, passwords }
+    //     };
+    //     localStorage.setItem('auth_data', JSON.stringify(versionedData));
+    // }, [users, passwords]);
 
 
     const login = (username: string, password: string) => {

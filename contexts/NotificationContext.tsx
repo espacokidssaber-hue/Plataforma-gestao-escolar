@@ -22,9 +22,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
     });
 
-    useEffect(() => {
-        localStorage.setItem('app_notifications', JSON.stringify(notifications));
-    }, [notifications]);
+    // useEffect(() => {
+    //     localStorage.setItem('app_notifications', JSON.stringify(notifications));
+    // }, [notifications]);
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 

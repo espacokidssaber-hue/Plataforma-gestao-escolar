@@ -20,10 +20,10 @@ const DailyChecklist: React.FC = () => {
         }
     }, [storageKey]);
 
-    // Save tasks to localStorage whenever they change
-    useEffect(() => {
-        localStorage.setItem(storageKey, JSON.stringify(tasks));
-    }, [tasks, storageKey]);
+    // // Save tasks to localStorage whenever they change - DISABLED FOR DEMO MODE
+    // useEffect(() => {
+    //     localStorage.setItem(storageKey, JSON.stringify(tasks));
+    // }, [tasks, storageKey]);
     
     // Focus input when editing
     useEffect(() => {

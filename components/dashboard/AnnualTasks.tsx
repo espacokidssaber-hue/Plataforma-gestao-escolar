@@ -91,7 +91,7 @@ const AnnualTasks: React.FC = () => {
             return acc;
         }, {} as Record<string, boolean>);
 
-        localStorage.setItem(storageKey, JSON.stringify(completedStatus));
+        // localStorage.setItem(storageKey, JSON.stringify(completedStatus)); // DISABLED FOR DEMO MODE
     };
     
     const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
