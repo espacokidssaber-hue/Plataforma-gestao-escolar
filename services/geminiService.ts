@@ -104,15 +104,38 @@ export interface ExtractedStudent {
 }
 
 export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise<ExtractedStudent[]> => {
-    const prompt = `
-        **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos de um relatório de matrículas em PDF.**
+    // Passo 1: Extrair o texto bruto do PDF.
+    const textExtractionPrompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído, sem adicionar comentários, resumos ou qualquer texto introdutório.`;
+    
+    let rawText: string;
+    try {
+        rawText = await generateDocumentText(textExtractionPrompt, pdfBase64);
+    } catch (error) {
+         console.error("Error in Step 1 (Text Extraction from PDF):", error);
+         throw new Error("A IA falhou na leitura inicial do arquivo PDF. Verifique se o arquivo não está corrompido ou se é apenas uma imagem.");
+    }
 
-        Você é um assistente de secretaria escolar extremamente meticuloso e preciso. Sua responsabilidade é garantir que **NENHUM** aluno seja omitido durante a extração de dados. É considerado um erro grave se qualquer aluno listado no documento não aparecer no resultado final.
+    if (!rawText || rawText.trim().length < 20) {
+        // Retorna um array vazio em vez de lançar um erro para uma melhor experiência do usuário
+        console.warn("O documento PDF parece estar vazio ou ilegível. Nenhum texto foi extraído.");
+        return [];
+    }
+
+    // Passo 2: Usar o texto extraído para gerar o JSON.
+    const jsonGenerationPrompt = `
+        **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos a partir do texto de um relatório de matrículas.**
+
+        Você é um assistente de secretaria escolar extremamente meticuloso e preciso. Sua responsabilidade é garantir que **NENHUM** aluno seja omitido durante a extração de dados.
+
+        **TEXTO EXTRAÍDO DO RELATÓRIO:**
+        ---
+        ${rawText}
+        ---
 
         **Instruções de Processamento:**
-        1.  **Processamento Linha por Linha:** Analise o documento de forma sequencial, linha por linha. Cada linha que contém o nome de um aluno deve ser tratada como um registro a ser extraído.
-        2.  **Extração Obrigatória:** Mesmo que uma linha de aluno tenha informações faltando (como CPF ou telefone), você **DEVE** extrair o nome do aluno e os dados disponíveis. Não descarte um aluno por dados incompletos.
-        3.  **Mapeamento de Campos:** Use os seguintes cabeçalhos da planilha para preencher o JSON:
+        1.  **Análise do Texto:** Analise o texto de forma sequencial. Cada linha ou bloco que parece ser um registro de aluno deve ser processado.
+        2.  **Extração Obrigatória:** Mesmo que um aluno tenha informações faltando, você **DEVE** extrair o nome e os dados disponíveis. Não descarte um registro por dados incompletos.
+        3.  **Mapeamento de Campos:** Use os seguintes cabeçalhos como guia para preencher o JSON:
             - NOME DO ALUNO -> studentName
             - DATA DE NASCIMENTO -> dateOfBirth
             - NOME DO RESPONSÁVEL -> guardianName
@@ -128,20 +151,16 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
             - CEP -> addressZip
 
         **Extração de Série, Turma e Unidade (Regras Específicas):**
-        1.  **Série (\`className\`):** Extraia a série (ex: "1º Ano", "Infantil II") da coluna "SÉRIE" ou similar. Se a coluna for "1º ANO A MAT", extraia apenas "1º ANO".
-        2.  **Turma (\`studentTurma\`):** Procure a turma (ex: 'A', 'B') na coluna "TURMA" ou como parte da série (ex: "1º ANO A").
-        3.  **Unidade Escolar (\`schoolUnit\`):** **Esta é uma etapa CRÍTICA.** Analise o nome da série ou da turma.
-            - Se terminar com ' MAT' ou contiver 'MATRIZ', defina \`schoolUnit\` como 'Matriz'.
-            - Se terminar com ' FIL' ou contiver 'FILIAL', defina \`schoolUnit\` como 'Filial'.
-            - Se terminar com ' ANX' ou contiver 'ANEXO', defina \`schoolUnit\` como 'Anexo'.
-            - Se nenhuma sigla for encontrada, use 'Matriz' como padrão.
-
-        **Verificação Final (Obrigatória):**
-        - Antes de concluir, faça uma revisão final do documento para garantir que **TODOS** os alunos listados foram incluídos no JSON de saída. Compare sua lista final com o documento original.
+        1.  **Série (\`className\`):** Extraia a série (ex: "1º Ano", "Infantil II") da coluna "SÉRIE" ou similar.
+        2.  **Turma (\`studentTurma\`):** Procure a turma (ex: 'A', 'B') na coluna "TURMA" ou como parte da série.
+        3.  **Unidade Escolar (\`schoolUnit\`):** Analise o nome da série ou da turma.
+            - Se contiver ' MAT' ou 'MATRIZ', defina \`schoolUnit\` como 'Matriz'.
+            - Se contiver ' FIL' ou 'FILIAL', defina \`schoolUnit\` como 'Filial'.
+            - Se contiver ' ANX' ou 'ANEXO', defina \`schoolUnit\` como 'Anexo'.
+            - Se não encontrar, use 'Matriz' como padrão.
 
         **Formato de Saída:**
-        - Retorne um array de objetos JSON. Se o documento for ilegível ou não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
-        - **Garantia de Completude:** A sua principal métrica de sucesso é a extração de 100% dos alunos. Certifique-se de que a contagem de alunos no seu JSON de saída corresponde à contagem de alunos no PDF.
+        - Retorne um array de objetos JSON. Se o texto não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
     `;
 
     const schema = {
@@ -172,28 +191,51 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
     
     try {
         const response = await callGeminiApi({
-            prompt,
+            prompt: jsonGenerationPrompt,
             schema,
-            pdfBase64,
             model: 'gemini-2.5-pro',
             stream: false
         });
         const jsonText = await response.text();
-        return jsonText ? JSON.parse(jsonText) : [];
+        
+        if (!jsonText) return [];
+
+        // Limpeza robusta de JSON, removendo possíveis blocos de código markdown
+        const cleanedJsonText = jsonText.trim().replace(/^```(json)?\s*/, '').replace(/\s*```$/, '');
+        
+        const parsedData = JSON.parse(cleanedJsonText);
+        
+        if (Array.isArray(parsedData)) {
+            return parsedData;
+        } else if (typeof parsedData === 'object' && Object.keys(parsedData).length === 0) {
+            return []; // Lida com o caso de objeto vazio {}
+        }
+        
+        console.warn("A IA retornou um objeto JSON que não é um array. Isso é inesperado. Retornando um array vazio.", parsedData);
+        return [];
+
     } catch (error) {
-        console.error("Error extracting students from PDF with Gemini via proxy:", error);
-        throw new Error("A IA não conseguiu processar o arquivo PDF. Verifique se o formato é legível e contém os dados esperados.");
+        console.error("Error in Step 2 (JSON Generation):", error);
+        throw new Error("A IA leu o PDF, mas falhou ao organizar os dados dos alunos. Verifique a estrutura do documento.");
     }
 };
 
 
-export const generateDocumentText = async (prompt: string): Promise<string> => {
+export const generateDocumentText = async (prompt: string, pdfBase64?: string): Promise<string> => {
   try {
-    const response = await callGeminiApi({ prompt, stream: false });
+    const response = await callGeminiApi({ 
+      prompt, 
+      stream: false, 
+      pdfBase64,
+      model: pdfBase64 ? 'gemini-2.5-flash' : undefined,
+    });
     const result = await response.json();
     const fullText = result.text;
     
     if (!fullText || fullText.trim() === '') {
+        if (pdfBase64) {
+             throw new Error("A IA não conseguiu extrair texto do PDF fornecido.");
+        }
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
     }
     return fullText;
