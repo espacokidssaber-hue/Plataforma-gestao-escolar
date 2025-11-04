@@ -1,81 +1,12 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { streamDocumentText } from '../services/geminiService';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
 import { useSchoolInfo } from '../contexts/EnrollmentContext';
-import { SchoolInfo } from '../types';
+import { SchoolInfo, StudentAcademicRecord } from '../types';
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;
-
-
-// --- MOCK DATA ---
-const ALL_MOCK_DATA: Record<string, Record<string, any>> = {
-  '2025': {
-    'Todos': {
-      overallAverage: 8.3,
-      approvalRate: 92.4,
-      atRiskStudents: 18,
-      averageAttendance: 97.5,
-      academicPerformanceData: [{ label: '1º A', value: 8.2 }, { label: '2º B', value: 7.5 }, { label: '3º A', value: 9.1 }, { label: '4º C', value: 8.8 }, { label: '5º A', value: 7.8 }],
-      performanceBySubjectData: [{ label: 'Português', value: 8.5 }, { label: 'Matemática', value: 7.8 }, { label: 'Ciências', value: 8.9 }, { label: 'História', value: 8.1 }, { label: 'Artes', value: 9.2 }],
-      approvalRateDonutData: [{ label: 'Aprovados', value: 450, color: '#22c55e' }, { label: 'Recuperação', value: 25, color: '#f97316' }, { label: 'Reprovados', value: 12, color: '#ef4444' }],
-      schoolAverageEvolutionData: [{ label: '2023', value: 8.0 }, { label: '2024', value: 8.1 }, { label: '2025', value: 8.3 }],
-    },
-    'Infantil': {
-      overallAverage: 9.4,
-      approvalRate: 100.0,
-      atRiskStudents: 0,
-      averageAttendance: 98.2,
-      academicPerformanceData: [{ label: 'Inf II A', value: 9.5 }, { label: 'Inf III B', value: 9.2 }, { label: 'Inf IV A', value: 9.4 }],
-      performanceBySubjectData: [{ label: 'Psicomot.', value: 9.5 }, { label: 'Música', value: 9.2 }, { label: 'Artes', value: 9.4 }],
-      approvalRateDonutData: [{ label: 'Aprovados', value: 120, color: '#22c55e' }, { label: 'Recuperação', value: 0, color: '#f97316' }, { label: 'Reprovados', value: 0, color: '#ef4444' }],
-      schoolAverageEvolutionData: [{ label: '2023', value: 9.1 }, { label: '2024', value: 9.2 }, { label: '2025', value: 9.4 }],
-    },
-    'Fund. I': {
-       overallAverage: 8.4,
-       approvalRate: 91.3,
-       atRiskStudents: 11,
-       averageAttendance: 96.8,
-       academicPerformanceData: [{ label: '1º A', value: 8.2 }, { label: '2º B', value: 7.5 }, { label: '3º A', value: 9.1 }, { label: '4º C', value: 8.8 }, { label: '5º A', value: 7.8 }],
-       performanceBySubjectData: [{ label: 'Português', value: 8.6 }, { label: 'Matemática', value: 8.1 }, { label: 'Ciências', value: 8.8 }],
-       approvalRateDonutData: [{ label: 'Aprovados', value: 210, color: '#22c55e' }, { label: 'Recuperação', value: 15, color: '#f97316' }, { label: 'Reprovados', value: 5, color: '#ef4444' }],
-       schoolAverageEvolutionData: [{ label: '2023', value: 8.1 }, { label: '2024', value: 8.2 }, { label: '2025', value: 8.4 }],
-    },
-  },
-  '2024': {
-     'Todos': {
-      overallAverage: 8.1,
-      approvalRate: 90.8,
-      atRiskStudents: 21,
-      averageAttendance: 96.1,
-      academicPerformanceData: [{ label: '1º A', value: 8.0 }, { label: '2º B', value: 7.2 }, { label: '3º A', value: 8.9 }, { label: '4º C', value: 8.5 }, { label: '5º A', value: 7.6 }],
-      performanceBySubjectData: [{ label: 'Português', value: 8.3 }, { label: 'Matemática', value: 7.5 }, { label: 'Ciências', value: 8.6 }],
-      approvalRateDonutData: [{ label: 'Aprovados', value: 445, color: '#22c55e' }, { label: 'Recuperação', value: 30, color: '#f97316' }, { label: 'Reprovados', value: 15, color: '#ef4444' }],
-      schoolAverageEvolutionData: [{ label: '2022', value: 7.9 }, { label: '2023', value: 8.0 }, { label: '2024', value: 8.1 }],
-    },
-     'Infantil': {
-      overallAverage: 9.2,
-      approvalRate: 100.0,
-      atRiskStudents: 0,
-      averageAttendance: 97.9,
-      academicPerformanceData: [{ label: 'Inf II A', value: 9.3 }, { label: 'Inf III B', value: 9.0 }, { label: 'Inf IV A', value: 9.1 }],
-      performanceBySubjectData: [{ label: 'Psicomot.', value: 9.4 }, { label: 'Música', value: 9.1 }, { label: 'Artes', value: 9.2 }],
-      approvalRateDonutData: [{ label: 'Aprovados', value: 118, color: '#22c55e' }, { label: 'Recuperação', value: 0, color: '#f97316' }, { label: 'Reprovados', value: 0, color: '#ef4444' }],
-       schoolAverageEvolutionData: [{ label: '2022', value: 9.0 }, { label: '2023', value: 9.1 }, { label: '2024', value: 9.2 }],
-    },
-    'Fund. I': {
-        overallAverage: 8.2,
-        approvalRate: 89.1,
-        atRiskStudents: 13,
-        averageAttendance: 95.5,
-        academicPerformanceData: [{ label: '1º A', value: 8.0 }, { label: '2º B', value: 7.2 }, { label: '3º A', value: 8.9 }, { label: '4º C', value: 8.5 }, { label: '5º A', value: 7.6 }],
-        performanceBySubjectData: [{ label: 'Português', value: 8.3 }, { label: 'Matemática', value: 7.5 }, { label: 'Ciências', value: 8.6 }],
-        approvalRateDonutData: [{ label: 'Aprovados', value: 205, color: '#22c55e' }, { label: 'Recuperação', value: 18, color: '#f97316' }, { label: 'Reprovados', value: 7, color: '#ef4444' }],
-        schoolAverageEvolutionData: [{ label: '2022', value: 8.0 }, { label: '2023', value: 8.1 }, { label: '2024', value: 8.2 }],
-    },
-  },
-};
 
 
 // --- Reusable Chart & UI Components ---
@@ -244,13 +175,116 @@ const PrintableReport: React.FC<{ title: string; data: any[]; schoolInfo: School
 const Reports: React.FC = () => {
     const [analysis, setAnalysis] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedYear, setSelectedYear] = useState('2025');
     const [selectedLevel, setSelectedLevel] = useState('Todos');
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
-    const [displayData, setDisplayData] = useState(ALL_MOCK_DATA[selectedYear][selectedLevel]);
-    const { enrolledStudents, classes } = useEnrollment();
+    const { enrolledStudents, classes, academicRecords, subjects } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
     const [printablePdfContent, setPrintablePdfContent] = useState<{ title: string; data: any[]; schoolInfo: SchoolInfo } | null>(null);
+
+    const displayData = useMemo(() => {
+        let levelFilteredStudents = enrolledStudents;
+        if (selectedLevel === 'Infantil') {
+            levelFilteredStudents = enrolledStudents.filter(s => (s.grade || '').toLowerCase().includes('infantil'));
+        } else if (selectedLevel === 'Fund. I') {
+            levelFilteredStudents = enrolledStudents.filter(s => ['1º Ano', '2º Ano', '3º Ano', '4º Ano', '5º Ano'].includes(s.grade));
+        }
+        const studentIds = new Set(levelFilteredStudents.map(s => s.id));
+        const records = academicRecords.filter(r => studentIds.has(r.studentId));
+
+        if (records.length === 0) {
+            return {
+                overallAverage: 0, approvalRate: 0, atRiskStudents: 0, averageAttendance: 0,
+                academicPerformanceData: [], performanceBySubjectData: [],
+                approvalRateDonutData: [{ label: 'Aprovados', value: 0, color: '#22c55e' }, { label: 'Recuperação', value: 0, color: '#f97316' }, { label: 'Reprovados', value: 0, color: '#ef4444' }],
+            };
+        }
+
+        let totalGrade = 0;
+        let gradeCount = 0;
+        const studentAverages: { studentId: number, avg: number }[] = [];
+        
+        records.forEach(rec => {
+            let studentTotal = 0;
+            let studentGradeCount = 0;
+            Object.values(rec.grades).forEach(subjectGrades => {
+                Object.values(subjectGrades).forEach(grade => {
+                    if (typeof grade === 'number') {
+                        totalGrade += grade;
+                        gradeCount++;
+                        studentTotal += grade;
+                        studentGradeCount++;
+                    }
+                });
+            });
+            if (studentGradeCount > 0) {
+                studentAverages.push({ studentId: rec.studentId, avg: studentTotal / studentGradeCount });
+            }
+        });
+
+        const overallAverage = gradeCount > 0 ? totalGrade / gradeCount : 0;
+
+        const approved = studentAverages.filter(s => s.avg >= 7).length;
+        const recovery = studentAverages.filter(s => s.avg >= 5 && s.avg < 7).length;
+        const failed = studentAverages.filter(s => s.avg < 5).length;
+        const totalWithAverage = studentAverages.length;
+
+        const approvalRate = totalWithAverage > 0 ? (approved / totalWithAverage) * 100 : 0;
+        const atRiskStudents = recovery + failed;
+
+        let totalAttendanceRate = 0;
+        let studentsWithAttendance = 0;
+        records.forEach(rec => {
+            const days = Object.values(rec.attendance);
+            if (days.length > 0) {
+                const present = days.filter(d => d === 'Presente' || d === 'Justificado').length;
+                totalAttendanceRate += (present / days.length);
+                studentsWithAttendance++;
+            }
+        });
+        const averageAttendance = studentsWithAttendance > 0 ? (totalAttendanceRate / studentsWithAttendance) * 100 : 0;
+
+        const performanceByClass = classes
+            .filter(c => levelFilteredStudents.some(s => s.classId === c.id))
+            .map(c => {
+                const classStudentIds = new Set(enrolledStudents.filter(s => s.classId === c.id).map(s => s.id));
+                const classAverages = studentAverages.filter(s => classStudentIds.has(s.studentId));
+                if (classAverages.length === 0) return { label: c.name, value: 0 };
+                const classAvg = classAverages.reduce((sum, s) => sum + s.avg, 0) / classAverages.length;
+                return { label: c.name, value: classAvg };
+            }).filter(c => c.value > 0);
+
+        const performanceBySubject: Record<string, { total: number, count: number }> = {};
+        records.forEach(rec => {
+            Object.entries(rec.grades).forEach(([subject, assessments]) => {
+                if (!performanceBySubject[subject]) performanceBySubject[subject] = { total: 0, count: 0 };
+                Object.values(assessments).forEach(grade => {
+                    if (typeof grade === 'number') {
+                        performanceBySubject[subject].total += grade;
+                        performanceBySubject[subject].count++;
+                    }
+                });
+            });
+        });
+        const performanceBySubjectData = Object.entries(performanceBySubject).map(([label, data]) => ({
+            label,
+            value: data.count > 0 ? data.total / data.count : 0,
+        }));
+        
+        return {
+            overallAverage, approvalRate, atRiskStudents, averageAttendance,
+            academicPerformanceData: performanceByClass,
+            performanceBySubjectData,
+            approvalRateDonutData: [
+                { label: 'Aprovados', value: approved, color: '#22c55e' }, 
+                { label: 'Recuperação', value: recovery, color: '#f97316' }, 
+                { label: 'Reprovados', value: failed, color: '#ef4444' }
+            ],
+        };
+    }, [selectedLevel, enrolledStudents, academicRecords, classes, subjects]);
+
+    useEffect(() => {
+        setAnalysis('');
+    }, [selectedLevel]);
 
     const operationalReports = [
         { name: "Lista Mestra de Alunos", description: "Tabela completa com todos os alunos matriculados e seus dados." },
@@ -264,13 +298,6 @@ const Reports: React.FC = () => {
         risk: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-teal-600 dark:text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
         attendance: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-teal-600 dark:text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
     };
-
-    useEffect(() => {
-        const dataForYear = ALL_MOCK_DATA[selectedYear] || ALL_MOCK_DATA['2025'];
-        const dataForLevel = dataForYear[selectedLevel] || dataForYear['Todos'];
-        setDisplayData(dataForLevel);
-        setAnalysis(''); 
-    }, [selectedYear, selectedLevel]);
     
     const handlePdfRendered = () => {
         if (!printablePdfContent) return;
@@ -305,13 +332,13 @@ const Reports: React.FC = () => {
         setAnalysis('');
         
         const dataContext = `
-            Analisar os seguintes dados acadêmicos para o ano de ${selectedYear}, nível "${selectedLevel}":
+            Analisar os seguintes dados acadêmicos para o nível "${selectedLevel}":
             - Média Geral: ${displayData.overallAverage.toFixed(1)}
             - Taxa de Aprovação: ${displayData.approvalRate.toFixed(1)}%
-            - Alunos em Risco (<7.0): ${displayData.atRiskStudents}
+            - Alunos em Risco (média < 7): ${displayData.atRiskStudents}
             - Frequência Média: ${displayData.averageAttendance.toFixed(1)}%
-            - Média por turma: ${displayData.academicPerformanceData.map((d: any) => `${d.label} (${d.value.toFixed(1)})`).join(', ')}.
-            - Desempenho por disciplina: ${displayData.performanceBySubjectData.map((d: any) => `${d.label} (${d.value.toFixed(1)})`).join(', ')}.
+            - Média por turma: ${displayData.academicPerformanceData.map((d: any) => `${d.label} (${d.value.toFixed(1)})`).join(', ') || 'N/A'}.
+            - Desempenho por disciplina: ${displayData.performanceBySubjectData.map((d: any) => `${d.label} (${d.value.toFixed(1)})`).join(', ') || 'N/A'}.
             
             Com base nesses dados, escreva uma análise pedagógica concisa para a gestão escolar. Use o seguinte formato Markdown:
             **Visão Geral:** Um resumo de 1-2 frases sobre o cenário geral.
@@ -428,10 +455,6 @@ const Reports: React.FC = () => {
             
             <div className="bg-white dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700/50 flex flex-wrap items-center justify-between gap-4">
                  <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                         <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">Ano Letivo:</span>
-                         {Object.keys(ALL_MOCK_DATA).map(year => <FilterButton key={year} label={year} active={selectedYear === year} onClick={() => setSelectedYear(year)} />)}
-                    </div>
                      <div className="flex items-center gap-2">
                          <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">Nível:</span>
                          {['Todos', 'Infantil', 'Fund. I'].map(level => <FilterButton key={level} label={level} active={selectedLevel === level} onClick={() => setSelectedLevel(level)} />)}
@@ -455,14 +478,11 @@ const Reports: React.FC = () => {
                 </Widget>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Widget title="Evolução da Média Anual">
-                     <div className="h-64"><VerticalBarChart data={displayData.schoolAverageEvolutionData} color="#f97316" /></div>
-                </Widget>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Widget title="Composição da Aprovação">
                      <div className="h-64"><DonutChart data={displayData.approvalRateDonutData} /></div>
                 </Widget>
-                <Widget title="Análise Inteligente com Gemini">
+                <Widget title="Análise Inteligente com Gemini" className="lg:col-span-1">
                     <div className="bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg text-gray-700 dark:text-gray-300 flex-grow min-h-[150px] overflow-y-auto text-sm">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-full">

@@ -6,9 +6,7 @@ import AnnualStudentGradesModal from './AnnualStudentGradesModal';
 import AttendanceReportModal from './AttendanceReportModal';
 import PrintableMonthlyAttendance from './PrintableMonthlyAttendance';
 import { MOCK_CALENDAR_EVENTS } from '../../data/calendarData';
-// FIX: Corrected import path for EnrollmentContext
 import { useEnrollment } from '../../contexts/EnrollmentContext';
-// FIX: Corrected import path for EnrollmentContext
 import { useSchoolInfo } from '../../contexts/EnrollmentContext';
 import { extractGradesFromPdf, ExtractedGrade } from '../../services/geminiService';
 import ImportGradesModal from './ImportGradesModal';
@@ -20,7 +18,7 @@ interface GradesAndAttendanceProps {
   selectedClass: { id: number; name:string } | null;
 }
 
-const GradeInput: React.FC<{ value: Grade, onChange: (value: Grade) => void, isDirty: boolean }> = ({ value, onChange, isDirty }) => (
+const GradeInput: React.FC<{ value: Grade, onChange: (value: Grade) => void }> = ({ value, onChange }) => (
     <div className="relative">
         <input 
             type="number" 
@@ -32,7 +30,6 @@ const GradeInput: React.FC<{ value: Grade, onChange: (value: Grade) => void, isD
             className="w-20 bg-gray-100 dark:bg-gray-700/50 text-center text-gray-900 dark:text-white rounded-md p-1 border border-transparent focus:border-teal-500 focus:ring-teal-500"
             aria-label="Campo de nota"
         />
-        {isDirty && <span className="absolute -top-1 -right-1 h-2 w-2 bg-yellow-400 rounded-full" title="Nota alterada"></span>}
     </div>
 );
 
@@ -53,14 +50,19 @@ const AttendanceSelector: React.FC<{ value: AttendanceStatus, onChange: (value: 
 
 
 const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass: initialSelectedClass }) => {
-    const { classLogs, subjects, addSubject, classes, enrolledStudents } = useEnrollment();
+    const { 
+        classLogs, 
+        subjects, 
+        addSubject, 
+        classes, 
+        enrolledStudents,
+        academicRecords,
+        updateStudentAcademicRecord 
+    } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
     const [activeTab, setActiveTab] = useState<'attendance' | 'grades'>('grades');
     const [selectedClass, setSelectedClass] = useState(initialSelectedClass);
     const [selectedSubjectId, setSelectedSubjectId] = useState(subjects[0]?.id || 0);
-
-    const [studentsData, setStudentsData] = useState<StudentAcademicRecord[]>([]);
-    const [initialStudentsData, setInitialStudentsData] = useState<StudentAcademicRecord[]>([]);
     const [studentForReport, setStudentForReport] = useState<StudentAcademicRecord | null>(null);
     const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
     const [diaryToPrint, setDiaryToPrint] = useState<any | null>(null);
@@ -87,22 +89,11 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
         }
     }, [initialSelectedClass]);
 
-    useEffect(() => {
-        if (selectedClass) {
-            // In a real app, this data would be fetched. For now, we create it from the enrolled students list.
-            const studentsInClass = enrolledStudents.filter(s => s.classId === selectedClass.id);
-            const academicDataForClass = studentsInClass.map(s => ({
-                studentId: s.id,
-                studentName: s.name,
-                avatar: s.avatar,
-                grades: {},
-                attendance: {},
-                observations: [],
-            }));
-            setStudentsData(JSON.parse(JSON.stringify(academicDataForClass)));
-            setInitialStudentsData(JSON.parse(JSON.stringify(academicDataForClass)));
-        }
-    }, [selectedClass, enrolledStudents]);
+    const studentsData = useMemo(() => {
+        if (!selectedClass) return [];
+        const studentsInClassIds = new Set(enrolledStudents.filter(s => s.classId === selectedClass.id).map(s => s.id));
+        return academicRecords.filter(record => studentsInClassIds.has(record.studentId));
+    }, [selectedClass, enrolledStudents, academicRecords]);
     
     useEffect(() => {
         const handlePrint = (onAfterPrint: () => void) => {
@@ -118,33 +109,20 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
 
 
     const handleGradeChange = (studentId: number, subjectName: string, assessmentName: string, value: Grade) => {
-        setStudentsData(prev => prev.map(s => {
-            if (s.studentId === studentId) {
-                const newGrades = { ...s.grades };
-                if (!newGrades[subjectName]) newGrades[subjectName] = {};
-                newGrades[subjectName][assessmentName] = value;
-                return { ...s, grades: newGrades };
-            }
-            return s;
-        }));
-    };
-    
-    const isDirty = useMemo(() => {
-        return JSON.stringify(studentsData) !== JSON.stringify(initialStudentsData);
-    }, [studentsData, initialStudentsData]);
-
-    const handleSave = () => {
-        // Here you would also push the changes to a backend/global state
-        setInitialStudentsData(JSON.parse(JSON.stringify(studentsData)));
-        alert('Alterações salvas com sucesso (simulação).');
+        const studentToUpdate = academicRecords.find(s => s.studentId === studentId);
+        if (!studentToUpdate) return;
+        
+        const newGrades = { ...studentToUpdate.grades };
+        if (!newGrades[subjectName]) newGrades[subjectName] = {};
+        newGrades[subjectName][assessmentName] = value;
+        
+        updateStudentAcademicRecord({ ...studentToUpdate, grades: newGrades });
     };
 
     const handleSaveObservation = (studentId: number, newObservations: StudentAcademicRecord['observations']) => {
-        const updatedStudents = studentsData.map(s => 
-            s.studentId === studentId ? { ...s, observations: newObservations } : s
-        );
-        setStudentsData(updatedStudents);
-        handleSave(); // Persist changes immediately
+        const studentToUpdate = academicRecords.find(s => s.studentId === studentId);
+        if (!studentToUpdate) return;
+        updateStudentAcademicRecord({ ...studentToUpdate, observations: newObservations });
     };
 
 
@@ -164,12 +142,10 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
     };
     
     const handleAttendanceChange = (studentId: number, dateKey: string, status: AttendanceStatus) => {
-        setStudentsData(prev => prev.map(s => {
-            if (s.studentId === studentId) {
-                return { ...s, attendance: { ...s.attendance, [dateKey]: status } };
-            }
-            return s;
-        }));
+        const studentToUpdate = academicRecords.find(s => s.studentId === studentId);
+        if (!studentToUpdate) return;
+        const newAttendance = { ...studentToUpdate.attendance, [dateKey]: status };
+        updateStudentAcademicRecord({ ...studentToUpdate, attendance: newAttendance });
     };
     
     const handleGenerateAttendanceReport = (month: number, year: number) => {
@@ -207,34 +183,30 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
             let updatedGradesCount = 0;
             
             let currentSubjects = [...subjects];
+            const studentToUpdate = JSON.parse(JSON.stringify(academicRecords.find(s => s.studentId === studentId)));
+            if (!studentToUpdate) throw new Error("Registro do aluno não encontrado.");
 
-            setStudentsData(prevStudentsData => {
-                const updatedStudentsData = JSON.parse(JSON.stringify(prevStudentsData));
-                const studentIndex = updatedStudentsData.findIndex((s: StudentAcademicRecord) => s.studentId === studentId);
-                if (studentIndex === -1) return prevStudentsData;
 
-                const studentToUpdate = updatedStudentsData[studentIndex];
-
-                extractedData.forEach(item => {
-                    let subjectExists = currentSubjects.find(s => s.name.toLowerCase() === item.subjectName.toLowerCase());
-                    
-                    if (!subjectExists) {
-                        const newSubject = addSubject(item.subjectName);
-                        currentSubjects.push(newSubject);
-                        newlyCreatedSubjects.add(item.subjectName);
+            extractedData.forEach(item => {
+                let subjectExists = currentSubjects.find(s => s.name.toLowerCase() === item.subjectName.toLowerCase());
+                
+                if (!subjectExists) {
+                    const newSubject = addSubject(item.subjectName);
+                    currentSubjects.push(newSubject);
+                    subjectExists = newSubject;
+                    newlyCreatedSubjects.add(item.subjectName);
+                }
+                
+                if(subjectExists) {
+                    if (!studentToUpdate.grades[subjectExists.name]) {
+                        studentToUpdate.grades[subjectExists.name] = {};
                     }
-                    
-                    if(subjectExists) {
-                        if (!studentToUpdate.grades[subjectExists.name]) {
-                            studentToUpdate.grades[subjectExists.name] = {};
-                        }
-                        studentToUpdate.grades[subjectExists.name][item.assessmentName] = item.grade;
-                        updatedGradesCount++;
-                    }
-                });
-
-                return updatedStudentsData;
+                    studentToUpdate.grades[subjectExists.name][item.assessmentName] = item.grade;
+                    updatedGradesCount++;
+                }
             });
+            
+            updateStudentAcademicRecord(studentToUpdate);
 
             setImportResult({
                 newSubjects: Array.from(newlyCreatedSubjects),
@@ -278,7 +250,6 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                     {activeTab === 'attendance' && <button onClick={() => setIsAttendanceReportModalOpen(true)} className="px-3 py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-600/50 dark:text-blue-200 text-xs font-semibold rounded-md">Gerar Relatório de Frequência</button>}
                     {activeTab === 'grades' && <button onClick={() => setIsImportModalOpen(true)} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-600/50 dark:text-indigo-200 text-xs font-semibold rounded-md">Importar Boletim (PDF)</button>}
                     <button onClick={() => setIsDiaryModalOpen(true)} className="px-3 py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-600/50 dark:text-blue-200 text-xs font-semibold rounded-md">Gerar Diário de Classe</button>
-                    {isDirty && <button onClick={handleSave} className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-md">Salvar Alterações</button>}
                 </div>
             </div>
 
@@ -310,13 +281,11 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                                     </td>
                                     {subjects.find(s => s.id === selectedSubjectId)?.assessments.map(ass => {
                                         const grade = student.grades[subjects.find(s => s.id === selectedSubjectId)?.name || '']?.[ass.name];
-                                        const initialGrade = initialStudentsData.find(s => s.studentId === student.studentId)?.grades[subjects.find(s => s.id === selectedSubjectId)?.name || '']?.[ass.name];
                                         return (
                                             <td key={ass.name} className="p-2 text-center">
                                                 <GradeInput 
                                                     value={grade}
                                                     onChange={value => handleGradeChange(student.studentId, subjects.find(s => s.id === selectedSubjectId)!.name, ass.name, value)}
-                                                    isDirty={grade !== initialGrade}
                                                 />
                                             </td>
                                         );

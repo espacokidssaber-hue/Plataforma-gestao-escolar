@@ -1,28 +1,39 @@
 import React, { useState } from 'react';
 import { useEnrollment } from '../../contexts/EnrollmentContext';
 import UploadActivityModal from './UploadActivityModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ActivitiesForPrinting: React.FC = () => {
     const { classes, uploadedActivities } = useEnrollment();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { user } = useAuth();
+
+    const canUpload = user?.role === 'educator';
+    const title = canUpload ? "Enviar Atividades para Impressão" : "Repositório de Atividades para Impressão";
+    const description = canUpload 
+        ? "Envie suas atividades em PDF para a secretaria e gerencie os arquivos enviados."
+        : "Gerencie e baixe as atividades enviadas pelas educadoras, organizadas por turma.";
+
 
     return (
         <>
             <div className="bg-white dark:bg-gray-800/30 rounded-lg p-6">
                 <header className="flex justify-between items-center mb-6">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Repositório de Atividades para Impressão</h2>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">Gerencie e baixe as atividades enviadas pelas educadoras, organizadas por turma.</p>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">{description}</p>
                     </div>
-                    <button 
-                        onClick={() => setIsModalOpen(true)}
-                        className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 transition-colors flex items-center space-x-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                        <span>Enviar Atividade</span>
-                    </button>
+                    {canUpload && (
+                        <button 
+                            onClick={() => setIsModalOpen(true)}
+                            className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 transition-colors flex items-center space-x-2"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                            <span>Enviar Atividade</span>
+                        </button>
+                    )}
                 </header>
 
                 <div className="space-y-4">
@@ -40,7 +51,7 @@ const ActivitiesForPrinting: React.FC = () => {
                                             {activitiesForClass.map(activity => (
                                                 <li key={activity.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800/60 rounded-md">
                                                     <div className="flex items-center space-x-3">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 dark:text-red-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500 dark:text-red-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2-2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" /></svg>
                                                         <div>
                                                             <p className="font-semibold text-gray-900 dark:text-white">{activity.title}</p>
                                                             <p className="text-xs text-gray-500 dark:text-gray-400">Enviado por {activity.educatorName} em {new Date(activity.uploadDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
@@ -66,7 +77,7 @@ const ActivitiesForPrinting: React.FC = () => {
                 </div>
             </div>
 
-            {isModalOpen && <UploadActivityModal onClose={() => setIsModalOpen(false)} />}
+            {isModalOpen && canUpload && <UploadActivityModal onClose={() => setIsModalOpen(false)} />}
         </>
     );
 };

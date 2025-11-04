@@ -53,7 +53,6 @@ const Admissions: React.FC = () => {
     const [activeSubView, setActiveSubView] = useState<EnrollmentSubView>(EnrollmentSubView.NEW_ENROLLMENTS);
     const [highlightedClassId, setHighlightedClassId] = useState<number | null>(null);
     const [isPublicLinkModalOpen, setIsPublicLinkModalOpen] = useState(false);
-    const [isPublicFormOpen, setIsPublicFormOpen] = useState(false);
     const [isPdfImporting, setIsPdfImporting] = useState(false);
     const [importStatus, setImportStatus] = useState('');
     const [isExporting, setIsExporting] = useState(false);
@@ -363,15 +362,11 @@ const Admissions: React.FC = () => {
                     <button onClick={() => setIsPublicLinkModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-500">
                         Obter Link Público
                     </button>
-                    <button onClick={() => setIsPublicFormOpen(true)} className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-500">
-                        Simular Acesso ao Link
-                    </button>
                  </div>
             </div>
 
             {renderSubView()}
             {isPublicLinkModalOpen && <PublicLinkModal onClose={() => setIsPublicLinkModalOpen(false)} />}
-            {isPublicFormOpen && <PublicEnrollmentForm onClose={() => setIsPublicFormOpen(false)} onSuccess={() => alert('Simulação de matrícula pública enviada com sucesso!')} />}
         </div>
     );
 };

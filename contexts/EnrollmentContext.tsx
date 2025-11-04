@@ -3,7 +3,7 @@ import {
     SchoolInfo, EnrolledStudent, SchoolClass, Lead, Applicant, ManualEnrollmentData,
     NewExtemporaneousData, Contact, ClassLogEntry, Subject, UploadedActivity,
     SignedContract, LeadStatus, NewEnrollmentStatus, StudentLifecycleStatus,
-    DocumentStatus, SchoolUnit, AllSchedules, Educator
+    DocumentStatus, SchoolUnit, AllSchedules, Educator, StudentAcademicRecord
 } from '../types';
 
 // ==================================================================================
@@ -28,6 +28,7 @@ interface AppData {
     signedContracts: SignedContract[];
     crmOptions: { discountPrograms: string[] };
     declarationTemplates: any[]; // Assuming type, can be defined
+    academicRecords: StudentAcademicRecord[];
 }
 
 // Function to get a unique identifier for a student
@@ -46,14 +47,16 @@ const migrateData = (data: any): AppData => {
 
 const getInitialData = (): AppData => {
     const storedDataJSON = localStorage.getItem('enrollment_data');
+    let data: AppData | null = null;
+
     if (storedDataJSON) {
         try {
             const storedData = JSON.parse(storedDataJSON);
             if (storedData.version === CURRENT_DATA_VERSION) {
-                return storedData.data;
+                data = storedData.data;
             } else {
                 console.warn(`Data version mismatch. Found ${storedData.version}, expected ${CURRENT_DATA_VERSION}.`);
-                return migrateData(storedData);
+                data = migrateData(storedData);
             }
         } catch (e) {
             console.error("Failed to parse enrollment_data from localStorage, resetting to default.", e);
@@ -61,26 +64,55 @@ const getInitialData = (): AppData => {
     }
 
     // Default initial state for a fresh install (NO MOCK DATA)
-    return {
-        schoolInfo: { name: 'Escola Modelo', cnpj: '00.000.000/0001-00', address: 'Rua Exemplo, 123', phone: '(00) 0000-0000', email: 'contato@escola.com', directorName: 'Diretor(a) Exemplo', secretaryName: 'Secretário(a) Exemplo' },
-        matrizInfo: null,
-        enrolledStudents: [],
-        classes: [],
-        leads: [],
-        applicants: [],
-        contacts: [],
-        classLogs: [],
-        subjects: [],
-        schedules: {},
-        educators: [],
-        uploadedActivities: {},
-        signedContracts: [],
-        crmOptions: { discountPrograms: ['Nenhum', 'Bolsa Padrão (25%)', 'Convênio Empresa (15%)', 'Irmãos (10%)', 'Indicação (5%)'] },
-        declarationTemplates: [
-            { id: 1, name: 'Declaração de Matrícula' },
-            { id: 2, name: 'Declaração de Conclusão' },
-        ],
-    };
+    if (!data) {
+        data = {
+            schoolInfo: { 
+                name: 'Escola Modelo', 
+                cnpj: '00.000.000/0001-00', 
+                address: 'Rua Exemplo, 123', 
+                phone: '(00) 0000-0000', 
+                email: 'contato@escola.com', 
+                directorName: 'Diretor(a) Exemplo', 
+                secretaryName: 'Secretário(a) Exemplo',
+                logo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAjTSURBVHhe7d1RjyRVGAbgLzgg4ICAGzhyyCHgBjgg4ICAG3DggIAzL3B5h7vc4Q4/wIEBDgg44Ddw3wAn4IAyKCPj/zT1jGZ1V1d1lU53d8+HSlZVVVXV3Un5VXXsT3+pAQDAq4h6fwAAgH6CAAAAJgoACACYKAAgAmCiAIAIAokCAAIgogCAiQIAAgAmCgAICJgoACACYKIAgAiCiQIAAiCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIA",
+            },
+            matrizInfo: null,
+            enrolledStudents: [],
+            classes: [],
+            leads: [],
+            applicants: [],
+            contacts: [],
+            classLogs: [],
+            subjects: [],
+            schedules: {},
+            educators: [],
+            uploadedActivities: {},
+            signedContracts: [],
+            crmOptions: { discountPrograms: ['Nenhum'] },
+            declarationTemplates: [
+                { id: 1, name: 'Declaração de Matrícula' },
+                { id: 2, name: 'Declaração de Conclusão' },
+            ],
+            academicRecords: [],
+        };
+    }
+
+    // Sync academic records with enrolled students
+    const studentIdsWithRecords = new Set(data.academicRecords.map(r => r.studentId));
+    data.enrolledStudents.forEach(s => {
+        if (!studentIdsWithRecords.has(s.id)) {
+            data!.academicRecords.push({
+                studentId: s.id,
+                studentName: s.name,
+                avatar: s.avatar,
+                grades: {},
+                attendance: {},
+                observations: [],
+            });
+        }
+    });
+
+    return data;
 };
 
 
@@ -130,6 +162,10 @@ interface EnrollmentContextType {
     addUploadedActivity: (activity: Omit<UploadedActivity, 'id' | 'classId' | 'uploadDate'>, classId: number) => void;
     signedContracts: SignedContract[];
     uploadSignedContract: (studentId: number, file: File, fileUrl: string) => void;
+    crmOptions: { discountPrograms: string[] };
+    updateCrmOptions: (options: { discountPrograms: string[] }) => void;
+    academicRecords: StudentAcademicRecord[];
+    updateStudentAcademicRecord: (record: StudentAcademicRecord) => void;
 }
 
 const EnrollmentContext = createContext<EnrollmentContextType | undefined>(undefined);
@@ -319,6 +355,20 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         setAppData(prev => ({ ...prev, signedContracts: [...prev.signedContracts.filter(c => c.studentId !== studentId), newContract]}));
     };
 
+    const updateCrmOptions = (options: { discountPrograms: string[] }) => {
+        setAppData(prev => ({
+            ...prev,
+            crmOptions: options
+        }));
+    };
+    
+    const updateStudentAcademicRecord = (record: StudentAcademicRecord) => {
+        setAppData(prev => ({
+            ...prev,
+            academicRecords: prev.academicRecords.map(r => r.studentId === record.studentId ? record : r)
+        }));
+    };
+
     const value = {
         ...appData,
         updateSchoolInfo,
@@ -326,7 +376,9 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         convertLeadToApplicant, addManualApplicant, submitPublicEnrollment, updateApplicant, finalizeEnrollment,
         highlightedApplicantId, setHighlightedApplicantId, addExtemporaneousApplicant, addContacts,
         addClassLog, updateClassLog, deleteClassLog, addSubject, addUploadedActivity, uploadSignedContract,
-        updateSchedules, addEducator, updateEducator
+        updateSchedules, addEducator, updateEducator,
+        updateCrmOptions,
+        updateStudentAcademicRecord,
     };
 
     return (

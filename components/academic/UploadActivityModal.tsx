@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface UploadActivityModalProps {
   onClose: () => void;
@@ -7,13 +8,21 @@ interface UploadActivityModalProps {
 
 const UploadActivityModal: React.FC<UploadActivityModalProps> = ({ onClose }) => {
     const { classes, addUploadedActivity } = useEnrollment();
+    const { user } = useAuth();
+    
     const [classId, setClassId] = useState('');
     const [title, setTitle] = useState('');
-    const [educatorName, setEducatorName] = useState('');
+    const [educatorName, setEducatorName] = useState(user?.username || '');
     const [file, setFile] = useState<File | null>(null);
     const [fileUrl, setFileUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (user) {
+            setEducatorName(user.username);
+        }
+    }, [user]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -73,7 +82,7 @@ const UploadActivityModal: React.FC<UploadActivityModalProps> = ({ onClose }) =>
                     </div>
                     <div>
                         <label htmlFor="educatorName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Educadora *</label>
-                        <input type="text" id="educatorName" value={educatorName} onChange={e => setEducatorName(e.target.value)} required placeholder="Ex: Prof. Ana Silva" className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" />
+                        <input type="text" id="educatorName" value={educatorName} readOnly disabled className="w-full bg-gray-200 dark:bg-gray-700/50 p-2 rounded-lg text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 cursor-not-allowed" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Arquivo (PDF) *</label>

@@ -1,43 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 
 export const EnrollmentSettings: React.FC = () => {
-    const initialOptions = useMemo(() => {
-        const saved = localStorage.getItem('enrollment_data');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                if (parsed.data && parsed.data.crmOptions) {
-                    return parsed.data.crmOptions;
-                }
-            } catch (e) { console.error("Could not parse enrollment_data for settings", e); }
-        }
-        return { discountPrograms: ['Nenhum', 'Bolsa Padrão (25%)', 'Convênio Empresa (15%)', 'Irmãos (10%)', 'Indicação (5%)'] };
-    }, []);
+    const { crmOptions, updateCrmOptions } = useEnrollment();
     
-    const [discountPrograms, setDiscountPrograms] = useState<string[]>(initialOptions.discountPrograms);
+    const [discountPrograms, setDiscountPrograms] = useState<string[]>(crmOptions.discountPrograms);
     const [newProgram, setNewProgram] = useState('');
 
+    useEffect(() => {
+        setDiscountPrograms(crmOptions.discountPrograms);
+    }, [crmOptions.discountPrograms]);
+
+    const hasChanges = useMemo(() => {
+        return JSON.stringify(discountPrograms) !== JSON.stringify(crmOptions.discountPrograms);
+    }, [discountPrograms, crmOptions.discountPrograms]);
+
     const handleSaveSettings = () => {
-        const saved = localStorage.getItem('enrollment_data');
-        let fullData = {};
-        if (saved) {
-            try {
-                fullData = JSON.parse(saved);
-            } catch (e) { /* ignore parsing error, will be overwritten */ }
-        }
-
-        const newCrmOptions = { discountPrograms };
-        
-        const updatedData = {
-            ...fullData,
-            data: {
-                // @ts-ignore
-                ...(fullData.data || {}),
-                crmOptions: newCrmOptions,
-            }
-        };
-
-        localStorage.setItem('enrollment_data', JSON.stringify(updatedData));
+        updateCrmOptions({ discountPrograms });
         alert('Configurações salvas!');
     };
 
@@ -151,7 +130,9 @@ export const EnrollmentSettings: React.FC = () => {
                     </section>
                     
                     <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <button onClick={handleSaveSettings} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg">Salvar Configurações</button>
+                        <button onClick={handleSaveSettings} disabled={!hasChanges} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+                            Salvar Configurações
+                        </button>
                     </div>
                 </div>
             </div>
