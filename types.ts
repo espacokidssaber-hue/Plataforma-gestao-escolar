@@ -165,6 +165,7 @@ export interface Applicant {
     address?: StudentAddress;
     enrollmentFee?: number;
     monthlyFee?: number;
+    interest?: string;
 }
 
 export interface ManualEnrollmentData {
@@ -183,6 +184,7 @@ export interface ManualEnrollmentData {
     discountProgram: string;
     enrollmentFee: number;
     monthlyFee: number;
+    grade: string;
 }
 
 // Re-enrollment

@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Applicant, NewEnrollmentStatus, DocumentStatus, StudentDocument, Guardian, HealthInfo, StudentAddress } from '../types';
+import { Applicant, NewEnrollmentStatus, DocumentStatus, StudentDocument, Guardian, HealthInfo, StudentAddress, SchoolInfo, EnrolledStudent, SchoolUnit, StudentLifecycleStatus } from '../types';
 import EnrollmentChecklist from './EnrollmentChecklist';
 import EnrollmentPaymentModal from './EnrollmentPaymentModal';
-import { generateJsonFromText } from '../services/geminiService';
+import { generateJsonFromText, fillContractWithData } from '../services/geminiService';
+import { useSchoolInfo } from '../contexts/EnrollmentContext';
+import { contractTemplate } from '../data/contractTemplate';
+import PrintableContract from './contracts/PrintableContract';
+
+// FIX: Declare html2pdf which is loaded globally.
+declare const html2pdf: any;
+
 
 interface EnrollmentValidationModalProps {
   applicant: Applicant;
@@ -39,6 +46,7 @@ const InputField: React.FC<{ label: string; name: string; value: string | undefi
 
 
 const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ applicant, onClose, onSave, onFinalize }) => {
+    const { schoolInfo } = useSchoolInfo();
     const DISCOUNT_PROGRAMS = useMemo(() => {
         const saved = localStorage.getItem('crmOptions');
         if (saved) {
@@ -56,6 +64,8 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
     const [geminiSuggestion, setGeminiSuggestion] = useState<string | null>(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
     const [isFetchingCep, setIsFetchingCep] = useState(false);
+    const [isDownloadingContract, setIsDownloadingContract] = useState(false);
+    const [printableContract, setPrintableContract] = useState<{ text: string; schoolInfo: SchoolInfo; student: EnrolledStudent } | null>(null);
     
     useEffect(() => {
         setCurrentApplicant(JSON.parse(JSON.stringify(applicant)));
@@ -191,6 +201,59 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
             setGeminiSuggestion(`Erro ao obter sugestão: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setIsSuggesting(false);
+        }
+    };
+    
+    const handleDownloadContract = async () => {
+        setIsDownloadingContract(true);
+        try {
+            // Create an EnrolledStudent-like object from the applicant data for the service
+            const studentDataForContract: EnrolledStudent = {
+                id: currentApplicant.id,
+                name: currentApplicant.name,
+                avatar: currentApplicant.avatar,
+                grade: currentApplicant.interest || 'Não informada',
+                className: currentApplicant.interest || 'Não informada',
+                classId: -1,
+                unit: SchoolUnit.MATRIZ, 
+                status: StudentLifecycleStatus.ACTIVE,
+                financialStatus: 'OK',
+                libraryStatus: 'OK',
+                academicDocsStatus: 'OK',
+                dateOfBirth: currentApplicant.dateOfBirth,
+                guardians: currentApplicant.guardians,
+                address: currentApplicant.address,
+                enrollmentFee: currentApplicant.enrollmentFee,
+                monthlyFee: currentApplicant.monthlyFee,
+            };
+
+            const filledContractText = await fillContractWithData(contractTemplate, studentDataForContract, schoolInfo);
+            
+            setPrintableContract({
+                text: filledContractText,
+                schoolInfo: schoolInfo,
+                student: studentDataForContract
+            });
+            // The actual PDF generation is triggered by the onRendered callback in PrintableContract
+        } catch (error) {
+            alert(`Erro ao gerar contrato: ${error instanceof Error ? error.message : 'Tente novamente.'}`);
+            setIsDownloadingContract(false);
+        }
+    };
+    
+    const triggerPdfDownload = () => {
+        const element = document.getElementById('printable-contract-content');
+        if (element) {
+            const safeFilename = `contrato_${currentApplicant.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+            html2pdf().from(element).set({
+                margin: 20,
+                filename: safeFilename,
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).save().then(() => {
+                setIsDownloadingContract(false);
+                setPrintableContract(null);
+            });
         }
     };
 
@@ -344,6 +407,15 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
                         
                         <div className="flex justify-end space-x-2">
                             <button onClick={handleSave} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg text-gray-800 dark:text-white">Salvar e Fechar</button>
+                            <button
+                                type="button"
+                                onClick={handleDownloadContract}
+                                disabled={!canFinalize || isDownloadingContract}
+                                className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg disabled:bg-gray-500 disabled:cursor-not-allowed"
+                                title={!canFinalize ? "Finalize a validação para baixar o contrato" : "Baixar Contrato Preenchido"}
+                            >
+                                {isDownloadingContract ? 'Gerando...' : 'Baixar Contrato'}
+                            </button>
                             <button onClick={handleFinalizeEnrollment} disabled={!canFinalize} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-lg disabled:bg-gray-500 disabled:cursor-not-allowed">
                                 Efetivar Matrícula
                             </button>
@@ -357,6 +429,11 @@ const EnrollmentValidationModal: React.FC<EnrollmentValidationModalProps> = ({ a
                     onClose={() => setIsPaymentModalOpen(false)}
                     onConfirm={handlePaymentConfirm}
                 />
+            )}
+            {isDownloadingContract && printableContract && (
+                <div className="fixed -top-[9999px] left-0 print-container">
+                    <PrintableContract {...printableContract} onRendered={triggerPdfDownload} />
+                </div>
             )}
             <style>{`
                 @keyframes fade-in {
