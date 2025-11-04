@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Applicant, NewEnrollmentStatus, DocumentStatus, StudentDocument, Guardian, HealthInfo, StudentAddress } from '../types';
 import EnrollmentChecklist from './EnrollmentChecklist';
 import EnrollmentPaymentModal from './EnrollmentPaymentModal';
-import { generateJsonFromText } from '../../services/geminiService';
+import { generateJsonFromText } from '../services/geminiService';
 
 interface EnrollmentValidationModalProps {
   applicant: Applicant;
