@@ -128,14 +128,24 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
             - UF -> addressState
             - CEP -> addressZip
 
-        **Extração de Série, Turma e Unidade (Regras Específicas):**
-        1.  **Série (\`className\`):** Extraia a série (ex: "1º Ano", "Infantil II") da coluna "SÉRIE" ou similar.
-        2.  **Turma (\`studentTurma\`):** Procure a turma (ex: 'A', 'B') na coluna "TURMA" ou como parte da série.
-        3.  **Unidade Escolar (\`schoolUnit\`):** Analise o nome da série ou da turma.
-            - Se contiver ' MAT' ou 'MATRIZ', defina \`schoolUnit\` como 'Matriz'.
-            - Se contiver ' FIL' ou 'FILIAL', defina \`schoolUnit\` como 'Filial'.
-            - Se contiver ' ANX' ou 'ANEXO', defina \`schoolUnit\` como 'Anexo'.
-            - Se não encontrar, use 'Matriz' como padrão.
+        **Extração de Série, Turma e Unidade (REGRAS CRÍTICAS):**
+        1.  **Série/Ano (\`className\`):**
+            *   Este campo é para o nível escolar, como "1º Ano", "Infantil II", "Jardim I".
+            *   Procure por colunas com os nomes "SÉRIE", "ANO", "SÉRIE DE INTERESSE" ou similar. Este é o campo mais importante.
+            *   **NÃO** inclua a letra da turma (A, B, T) neste campo. Apenas o nível escolar.
+            *   Se a informação da série não estiver em uma coluna dedicada, analise outras colunas como "CURSO" ou "TURMA" para inferir a série. Por exemplo, se uma coluna "TURMA" contém "1 ANO - A", o valor para \`className\` é "1º Ano".
+
+        2.  **Turma (\`studentTurma\`):**
+            *   Este campo é para o identificador da turma, geralmente uma letra ou palavra curta como 'A', 'B', 'Tarde', 'Manhã', 'T'.
+            *   Procure por uma coluna chamada "TURMA".
+            *   Se não houver uma coluna "TURMA", a informação pode estar junto com a série. Por exemplo, em "1 ANO - A", o valor para \`studentTurma\` é "A". Em "Infantil II Tarde", o valor é "Tarde".
+
+        3.  **Unidade Escolar (\`schoolUnit\`):**
+            *   Analise o nome da série ou da turma para encontrar indicadores de unidade.
+            *   Se o texto contiver ' MAT' ou 'MATRIZ', defina \`schoolUnit\` como 'Matriz'.
+            *   Se o texto contiver ' FIL' ou 'FILIAL', defina \`schoolUnit\` como 'Filial'.
+            *   Se o texto contiver ' ANX' ou 'ANEXO', defina \`schoolUnit\` como 'Anexo'.
+            *   Se nenhum indicador for encontrado, use 'Matriz' como o valor padrão.
 
         **Formato de Saída:**
         - Retorne um array de objetos JSON. Se o documento não contiver uma lista de alunos, ou for ilegível (como uma imagem), retorne um array JSON vazio: \`[]\`.

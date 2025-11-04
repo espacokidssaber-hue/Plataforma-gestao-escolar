@@ -278,8 +278,13 @@ const Admissions: React.FC = () => {
             }
 
             enrollStudentsFromImport(newStudents);
+            
+            const studentCount = newStudents.length;
+            const studentText = studentCount === 1 ? 'aluno foi importado' : 'alunos foram importados';
+            const pronoun = studentCount === 1 ? 'Ele está disponível' : 'Eles estão disponíveis';
+            const contactText = studentCount === 1 ? 'Seu contato (e-mail e telefone) foi adicionado' : 'Seus contatos (e-mail e telefone) foram adicionados';
 
-            alert(`${newStudents.length} alunos foram importados com sucesso! Eles estão disponíveis na tela de "Movimentação" para alocação de turma. Seus contatos (e-mail e telefone) foram adicionados à agenda em Comunicação.`);
+            alert(`${studentCount} ${studentText} com sucesso! ${pronoun} na tela de "Movimentação" para alocação de turma. ${contactText} à agenda em Comunicação.`);
             setActiveSubView(EnrollmentSubView.TRANSFERS);
 
         } catch (error) {
