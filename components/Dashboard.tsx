@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNotification } from '../contexts/NotificationContext';
-import { LeadStatus, NotificationType, StudentLifecycleStatus, NewEnrollmentStatus } from '../types';
+import { LeadStatus, NotificationType, StudentLifecycleStatus, NewEnrollmentStatus, View } from '../types';
 import DailyChecklist from './dashboard/DailyChecklist';
 import SystemTasks from './dashboard/SystemTasks';
 import AnnualTasks from './dashboard/AnnualTasks';
@@ -26,7 +26,12 @@ const KPICard: React.FC<{ title: string; value: string; change?: string; changeT
     );
 };
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  setActiveView: (view: View) => void;
+}
+
+
+const Dashboard: React.FC<DashboardProps> = ({ setActiveView }) => {
     const { notifications } = useNotification();
     const { enrolledStudents, leads, classes, applicants } = useEnrollment();
 

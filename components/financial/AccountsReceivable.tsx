@@ -18,10 +18,13 @@ const StatusBadge: React.FC<{ status: InvoiceStatus }> = ({ status }) => {
     );
 };
 
+interface AccountsReceivableProps {
+  invoices: Invoice[];
+  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
+}
 
-const AccountsReceivable: React.FC = () => {
+const AccountsReceivable: React.FC<AccountsReceivableProps> = ({ invoices, setInvoices }) => {
     const { enrolledStudents } = useEnrollment();
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [filter, setFilter] = useState<InvoiceStatus | 'all'>('all');
     const [invoiceToConfirm, setInvoiceToConfirm] = useState<Invoice | null>(null);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);

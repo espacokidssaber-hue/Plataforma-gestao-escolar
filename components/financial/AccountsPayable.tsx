@@ -17,9 +17,13 @@ const StatusBadge: React.FC<{ status: ExpenseStatus }> = ({ status }) => {
     );
 };
 
+interface AccountsPayableProps {
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+}
 
-const AccountsPayable: React.FC = () => {
-    const [expenses, setExpenses] = useState<Expense[]>([]);
+
+const AccountsPayable: React.FC<AccountsPayableProps> = ({ expenses, setExpenses }) => {
     const [filter, setFilter] = useState<ExpenseStatus | 'all'>('all');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isPaidModalOpen, setIsPaidModalOpen] = useState(false);

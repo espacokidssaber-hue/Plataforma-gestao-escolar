@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Educator, EducatorStatus } from '../../types';
 import AddEducatorModal from './AddEducatorModal';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
 
 // --- AVATAR UTILS START ---
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
@@ -22,7 +23,7 @@ type SaveEducatorData = Omit<Educator, 'id' | 'avatar'> & { id?: number; avatar:
 
 
 const Educators: React.FC = () => {
-    const [educators, setEducators] = useState<Educator[]>([]);
+    const { educators, addEducator, updateEducator } = useEnrollment();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [educatorToEdit, setEducatorToEdit] = useState<Educator | null>(null);
 
@@ -38,26 +39,26 @@ const Educators: React.FC = () => {
 
     const handleSaveEducator = (data: SaveEducatorData) => {
         if (data.id) { // Update existing
-            setEducators(prev => 
-                prev.map(e => {
-                    if (e.id === data.id) {
-                        return { ...e, ...data, avatar: data.avatar || generateAvatar(data.name) };
-                    }
-                    return e;
-                })
-            );
-        } else { // Add new
-            const newId = Date.now();
-            const newEducator: Educator = {
+            const updatedEducator: Educator = {
+                id: data.id,
                 name: data.name,
                 role: data.role,
                 subjects: data.subjects,
                 status: data.status,
                 hireDate: data.hireDate,
-                id: newId,
-                avatar: data.avatar || generateAvatar(data.name)
+                avatar: data.avatar || generateAvatar(data.name),
             };
-            setEducators(prev => [newEducator, ...prev]);
+            updateEducator(updatedEducator);
+        } else { // Add new
+            const newEducator: Omit<Educator, 'id'> = {
+                name: data.name,
+                role: data.role,
+                subjects: data.subjects,
+                status: data.status,
+                hireDate: data.hireDate,
+                avatar: data.avatar || generateAvatar(data.name),
+            };
+            addEducator(newEducator);
         }
         handleCloseModal();
     };

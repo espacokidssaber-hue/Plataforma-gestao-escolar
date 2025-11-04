@@ -54,7 +54,7 @@ const AppContent: React.FC = () => {
     const renderView = () => {
       switch (activeView) {
         case View.DASHBOARD:
-          return <Dashboard />;
+          return <Dashboard setActiveView={setActiveView} />;
         case View.ENROLLMENTS:
           return <Admissions />;
         case View.STUDENTS:

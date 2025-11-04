@@ -22,8 +22,7 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
 
     const selectedStudent = useMemo(() => students.find(s => s.id.toString() === studentId), [students, studentId]);
     const selectedEducator = useMemo(() => educators.find(e => e.id.toString() === educatorId), [educators, educatorId]);
-    const attendeeName = type === 'responsavel' ? selectedStudent?.guardians?.[0]?.name : selectedEducator?.name;
-
+    
     const isFormValid = subject.trim() !== '' && dateTime !== '';
 
     const handleGenerateMessage = async () => {
@@ -31,6 +30,11 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
             alert("Preencha o assunto, data/hora e selecione um convidado antes de gerar a mensagem.");
             return;
         }
+        const isBulkInvite = type === 'educadora' && educatorId === 'all-educators';
+        const attendeeName = isBulkInvite 
+            ? 'Equipe de Educadoras' 
+            : (type === 'responsavel' ? selectedStudent?.guardians?.[0]?.name : selectedEducator?.name);
+
         setIsGenerating(true);
         const prompt = `Escreva uma mensagem de convite formal e amigável para uma reunião escolar.
         - Convidado: ${attendeeName || 'Convidado(a)'}
@@ -51,6 +55,11 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!isFormValid) return;
+        
+        const isBulkInvite = type === 'educadora' && educatorId === 'all-educators';
+        const attendeeName = isBulkInvite 
+            ? 'Equipe de Educadoras' 
+            : (type === 'responsavel' ? selectedStudent?.guardians?.[0]?.name : selectedEducator?.name);
 
         const meetingData = {
             title: subject,
@@ -64,6 +73,7 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
             date: new Date(dateTime).toISOString(),
             channels: channels,
             message: message,
+            isBulk: isBulkInvite,
         };
         onSchedule(meetingData);
     };
@@ -98,6 +108,7 @@ const NewMeetingModal: React.FC<NewMeetingModalProps> = ({ students, educators, 
                             <label htmlFor="educatorId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Educadora</label>
                             <select id="educatorId" value={educatorId} onChange={e => setEducatorId(e.target.value)} className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg">
                                 <option value="">Selecione a educadora (opcional)...</option>
+                                <option value="all-educators">Todos(as) os(as) Educadores(as)</option>
                                 {educators.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                             </select>
                         </div>

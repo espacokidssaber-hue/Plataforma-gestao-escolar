@@ -1,28 +1,47 @@
-import React, { useState } from 'react';
-import { Announcement } from '../../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Announcement, UserRole } from '../../types';
 import { generateDocumentText } from '../../services/geminiService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BoardIcon: React.FC<{className?: string}> = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" /></svg>);
 const EmailIcon: React.FC<{className?: string}> = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 2.332l7.997 3.552A1 1 0 0118 6.884V14a1 1 0 01-1 1H3a1 1 0 01-1-1V6.884a1 1 0 01.003-.999zM11 8a1 1 0 10-2 0v2a1 1 0 102 0V8z" /></svg>);
 const WhatsAppIcon: React.FC<{className?: string}> = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" className={className}><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 .9c48.4 0 93.2 18.7 127.6 53.2 34.4 34.4 53.2 79.2 53.2 127.6s-18.8 93.2-53.2 127.6c-34.4 34.4-79.2 53.2-127.6 53.2h-.1c-33.8 0-66.3-9.3-94-26.4l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5zm101.2 138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>);
 const AppIcon: React.FC<{className?: string}> = ({className}) => (<svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>);
 
-
-const INITIAL_ANNOUNCEMENTS: Announcement[] = [
-    { id: 1, title: 'Início das Provas Bimestrais', author: 'Coordenação Pedagógica', date: '2023-11-05T10:00:00Z', audience: 'Alunos e Responsáveis - Fundamental II', content: 'Lembramos que as provas bimestrais terão início na próxima segunda-feira, dia 12. O cronograma completo já foi enviado por e-mail e está disponível no portal do aluno. Desejamos a todos uma ótima semana de avaliações!', channels: { board: true, email: true, app: true, whatsapp: false } },
-    { id: 2, title: 'Campanha do Agasalho 2023', author: 'Diretoria', date: '2023-11-02T14:30:00Z', audience: 'Toda a Comunidade Escolar', content: 'Nossa tradicional campanha do agasalho já começou! As caixas de coleta estão posicionadas na entrada da escola. Sua doação pode aquecer o inverno de muitas famílias. Contamos com a colaboração de todos até o dia 30/11.', channels: { board: true, email: false, app: false, whatsapp: true } },
-    { id: 3, title: 'Festa Junina - Venda de Ingressos', author: 'Associação de Pais e Mestres', date: '2023-10-28T09:00:00Z', audience: 'Toda a Comunidade Escolar', content: 'Os ingressos para a nossa grande Festa Junina já estão à venda na secretaria. Garanta o seu e venha se divertir conosco no dia 22/06 com muitas comidas típicas, danças e brincadeiras!', channels: { board: true, email: true, app: true, whatsapp: true } },
-];
-
 const NoticeBoard: React.FC = () => {
-    const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+    const { user } = useAuth();
+    const [announcements, setAnnouncements] = useState<Announcement[]>(() => {
+        const saved = localStorage.getItem('school_announcements');
+        return saved ? JSON.parse(saved) : [];
+    });
     const [showModal, setShowModal] = useState(false);
+    
+    useEffect(() => {
+        localStorage.setItem('school_announcements', JSON.stringify(announcements));
+    }, [announcements]);
+    
+    const filteredAnnouncements = useMemo(() => {
+        if (!user) return [];
+        if (user.role === 'admin') {
+            return announcements;
+        }
+        return announcements.filter(ann => 
+            ann.recipientRole === 'all' || 
+            ann.recipientRole === user.role ||
+            (user.role === 'educator' && (ann.authorRole === 'admin' || ann.authorRole === 'secretary')) ||
+            (user.role === 'secretary' && (ann.authorRole === 'admin' || ann.authorRole === 'educator'))
+        );
+    }, [announcements, user]);
 
-    const handleAddAnnouncement = (data: Omit<Announcement, 'id' | 'author' | 'date'>) => {
+
+    const handleAddAnnouncement = (data: Omit<Announcement, 'id' | 'author' | 'authorId' | 'authorRole' | 'date'>) => {
+        if (!user) return;
         const newAnnouncement: Announcement = {
             ...data,
             id: Date.now(),
-            author: 'Secretaria',
+            author: user.username,
+            authorId: user.id,
+            authorRole: user.role,
             date: new Date().toISOString(),
         };
         setAnnouncements(prev => [newAnnouncement, ...prev]);
@@ -51,6 +70,22 @@ const NoticeBoard: React.FC = () => {
             {channels.app && <AppIcon className="h-4 w-4" title="Enviado por Notificação do App" />}
         </div>
     );
+    
+    const getCardColorClass = (role: UserRole) => {
+        switch (role) {
+            case 'admin': return 'border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10';
+            case 'secretary': return 'border-l-green-500 bg-green-50/50 dark:bg-green-900/10';
+            case 'educator': return 'border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10';
+            default: return 'border-l-gray-500 bg-gray-50/50 dark:bg-gray-800/10';
+        }
+    };
+    
+    const roleDisplayMap: Record<UserRole | 'all', string> = { 
+        admin: 'Administração', 
+        secretary: 'Secretaria', 
+        educator: 'Educador(a)', 
+        all: 'Todos' 
+    };
 
     return (
         <div className="space-y-6">
@@ -61,13 +96,15 @@ const NoticeBoard: React.FC = () => {
                 </button>
             </div>
 
-            {announcements.map(ann => (
-                <div key={ann.id} className="bg-white dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700/50">
+            {filteredAnnouncements.map(ann => (
+                <div key={ann.id} className={`p-6 rounded-xl border border-gray-200 dark:border-gray-700/50 border-l-4 ${getCardColorClass(ann.authorRole)}`}>
                     <div className="flex justify-between items-start gap-4">
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">{ann.title}</h3>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Por <span className="font-semibold">{ann.author}</span> em {new Date(ann.date).toLocaleDateString('pt-BR')} para <span className="text-teal-600 dark:text-teal-300">{ann.audience}</span>
+                                <strong>De:</strong> {ann.author} ({roleDisplayMap[ann.authorRole]}) | <strong>Para:</strong> {roleDisplayMap[ann.recipientRole]}
+                                <span className="mx-2">|</span>
+                                {new Date(ann.date).toLocaleDateString('pt-BR')}
                             </p>
                         </div>
                         <ChannelIcons channels={ann.channels} />
@@ -75,6 +112,11 @@ const NoticeBoard: React.FC = () => {
                     <p className="mt-4 text-gray-700 dark:text-gray-300">{ann.content}</p>
                 </div>
             ))}
+            {filteredAnnouncements.length === 0 && (
+                 <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+                    <p>Nenhum aviso para exibir.</p>
+                </div>
+            )}
             
             {showModal && (
                 <NewAnnouncementModal onClose={() => setShowModal(false)} onAdd={handleAddAnnouncement} />
@@ -86,15 +128,48 @@ const NoticeBoard: React.FC = () => {
 
 interface NewAnnouncementModalProps {
     onClose: () => void;
-    onAdd: (data: Omit<Announcement, 'id' | 'author' | 'date'>) => void;
+    onAdd: (data: Omit<Announcement, 'id' | 'author' | 'authorId' | 'authorRole' | 'date'>) => void;
 }
 
 const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({ onClose, onAdd }) => {
+    const { user } = useAuth();
     const [title, setTitle] = useState('');
-    const [audience, setAudience] = useState('Toda a Comunidade Escolar');
+    const [recipientRole, setRecipientRole] = useState<UserRole | 'all'>('all');
     const [content, setContent] = useState('');
     const [channels, setChannels] = useState({ board: true, email: false, whatsapp: false, app: false });
     const [isGenerating, setIsGenerating] = useState(false);
+
+    const recipientOptions = useMemo(() => {
+        if (!user) return [];
+        switch(user.role) {
+            case 'admin':
+                return [
+                    { value: 'all', label: 'Toda a Comunidade Escolar' },
+                    { value: 'secretary', label: 'Apenas Secretaria' },
+                    { value: 'educator', label: 'Apenas Educadoras' },
+                ];
+            case 'secretary':
+                 return [
+                    { value: 'all', label: 'Toda a Comunidade Escolar' },
+                    { value: 'educator', label: 'Apenas Educadoras' },
+                    { value: 'admin', label: 'Apenas Administração' },
+                ];
+            case 'educator':
+                 return [
+                    { value: 'secretary', label: 'Apenas Secretaria' },
+                    { value: 'admin', label: 'Apenas Administração' },
+                ];
+            default:
+                return [];
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (recipientOptions.length > 0) {
+            setRecipientRole(recipientOptions[0].value as UserRole | 'all');
+        }
+    }, [recipientOptions]);
+
 
     const handleGenerateWithAI = async () => {
         if (!title.trim()) {
@@ -102,7 +177,10 @@ const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({ onClose, on
             return;
         }
         setIsGenerating(true);
-        const prompt = `Aja como um profissional de comunicação escolar. Escreva um comunicado claro e amigável para o público "${audience}" sobre o seguinte tópico: "${title}". O comunicado será exibido no mural de avisos da escola e enviado para os pais.`;
+        const roleDisplayMap: Record<UserRole | 'all', string> = { admin: 'Administração', secretary: 'Secretaria', educator: 'Educadoras', all: 'Toda a Comunidade Escolar' };
+        const audienceText = roleDisplayMap[recipientRole];
+
+        const prompt = `Aja como um profissional de comunicação escolar. Escreva um comunicado claro e amigável para o público "${audienceText}" sobre o seguinte tópico: "${title}". O comunicado será exibido no mural de avisos da escola e enviado para os pais.`;
         try {
             const result = await generateDocumentText(prompt);
             setContent(result);
@@ -115,7 +193,7 @@ const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({ onClose, on
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        onAdd({ title, audience, content, channels });
+        onAdd({ title, recipientRole, content, channels });
     };
 
     return (
@@ -124,12 +202,14 @@ const NewAnnouncementModal: React.FC<NewAnnouncementModalProps> = ({ onClose, on
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Criar Novo Aviso</h3>
                 <div className="space-y-4 flex-grow overflow-y-auto pr-2">
                     <input type="text" placeholder="Título do Aviso" value={title} onChange={e => setTitle(e.target.value)} required className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600" />
-                    <select value={audience} onChange={e => setAudience(e.target.value)} required className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600">
-                        <option>Toda a Comunidade Escolar</option>
-                        <option>Alunos e Responsáveis - Fundamental I</option>
-                        <option>Alunos e Responsáveis - Fundamental II</option>
-                        <option>Corpo Docente</option>
-                    </select>
+                    
+                    <div>
+                        <label htmlFor="recipientRole" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Público-alvo</label>
+                        <select id="recipientRole" value={recipientRole} onChange={e => setRecipientRole(e.target.value as any)} required className="w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600">
+                             {recipientOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                    </div>
+
                     <div className="relative">
                         <div className="flex justify-between items-center mb-1">
                             <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Conteúdo do aviso</label>

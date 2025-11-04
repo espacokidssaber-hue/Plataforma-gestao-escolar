@@ -61,7 +61,7 @@ const generateTimeSlots = (
 
 
 const Schedules: React.FC = () => {
-    const { classes } = useEnrollment(); // Using real classes from context
+    const { classes, schedules: contextSchedules, updateSchedules, educators } = useEnrollment();
     const [viewMode, setViewMode] = useState<'class' | 'educator'>('class');
     const [activeShift, setActiveShift] = useState<ClassPeriod>(ClassPeriod.MORNING);
     const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
@@ -71,7 +71,7 @@ const Schedules: React.FC = () => {
     const [editingCellInfo, setEditingCellInfo] = useState<{ day: string; time: string; item?: ScheduleItem } | null>(null);
     
     // States for schedules and time slots
-    const [schedules, setSchedules] = useState<AllSchedules>({});
+    const [schedules, setSchedules] = useState<AllSchedules>(contextSchedules);
     const [morningTimeSlots, setMorningTimeSlots] = useState(() => JSON.parse(JSON.stringify(MORNING_TIME_SLOTS)));
     const [afternoonTimeSlots, setAfternoonTimeSlots] = useState(() => JSON.parse(JSON.stringify(AFTERNOON_TIME_SLOTS)));
 
@@ -93,9 +93,10 @@ const Schedules: React.FC = () => {
     const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
     const printMenuRef = useRef<HTMLDivElement>(null);
     
-    // NOTE: Educators are still mock as they are not in the EnrollmentContext
-    const [educators] = useState<Educator[]>([]); 
-    
+    useEffect(() => {
+        setSchedules(contextSchedules);
+    }, [contextSchedules]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (printMenuRef.current && !printMenuRef.current.contains(event.target as Node)) {
@@ -244,6 +245,7 @@ const Schedules: React.FC = () => {
     };
 
     const handleSaveChanges = () => {
+        updateSchedules(schedules);
         setIsEditMode(false);
         setInitialSchedules(null); // Clear backup
         alert("Horários salvos com sucesso!");

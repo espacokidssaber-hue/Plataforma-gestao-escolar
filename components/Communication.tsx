@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { CommunicationSubView } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import NoticeBoard from './communication/NoticeBoard';
 import DirectMessages from './communication/DirectMessages';
 import BulkMessaging from './communication/BulkMessaging';
 import MeetingScheduling from './communication/MeetingScheduling';
+
+const InternalMessages = lazy(() => import('./communication/InternalMessages'));
 
 const SubNavButton: React.FC<{
     label: string;
@@ -23,14 +26,70 @@ const SubNavButton: React.FC<{
 );
 
 const Communication: React.FC = () => {
-    const [activeSubView, setActiveSubView] = useState<CommunicationSubView>(CommunicationSubView.NOTICE_BOARD);
+    const { user } = useAuth();
+
+    const availableSubViews = useMemo(() => {
+        if (!user) return [];
+        switch (user.role) {
+            case 'admin':
+                return Object.values(CommunicationSubView);
+            case 'secretary':
+                return [
+                    CommunicationSubView.NOTICE_BOARD,
+                    CommunicationSubView.DIRECT_MESSAGES,
+                    CommunicationSubView.INTERNAL_MESSAGES,
+                    CommunicationSubView.MEETING_SCHEDULING,
+                ];
+            case 'educator':
+                return [
+                    CommunicationSubView.NOTICE_BOARD,
+                    CommunicationSubView.INTERNAL_MESSAGES,
+                ];
+            default:
+                return [];
+        }
+    }, [user]);
+    
+    // Set initial view based on role
+    const getInitialView = () => {
+        if (user?.role === 'educator') {
+            return CommunicationSubView.INTERNAL_MESSAGES;
+        }
+        return CommunicationSubView.NOTICE_BOARD;
+    };
+
+    const [activeSubView, setActiveSubView] = useState<CommunicationSubView>(getInitialView());
+    
+    // Effect to ensure the active view is always valid for the user
+    useEffect(() => {
+        if (availableSubViews.length > 0 && !availableSubViews.includes(activeSubView)) {
+            setActiveSubView(getInitialView());
+        }
+    }, [availableSubViews, activeSubView, user]);
+
 
     const renderSubView = () => {
+        if (!availableSubViews.includes(activeSubView)) {
+             return (
+                <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-800/30 rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400">
+                        Você não tem permissão para acessar esta área.
+                    </p>
+                </div>
+            );
+        }
+
         switch (activeSubView) {
             case CommunicationSubView.NOTICE_BOARD:
                 return <NoticeBoard />;
             case CommunicationSubView.DIRECT_MESSAGES:
                 return <DirectMessages />;
+            case CommunicationSubView.INTERNAL_MESSAGES:
+                return (
+                    <Suspense fallback={<div>Carregando...</div>}>
+                        <InternalMessages />
+                    </Suspense>
+                );
             case CommunicationSubView.BULK_MESSAGING:
                 return <BulkMessaging />;
             case CommunicationSubView.MEETING_SCHEDULING:
@@ -54,7 +113,7 @@ const Communication: React.FC = () => {
             </header>
             
             <nav className="flex items-center space-x-2 mb-6 border-b border-gray-200 dark:border-gray-700 pb-3 overflow-x-auto">
-                {Object.values(CommunicationSubView).map(view => (
+                {availableSubViews.map(view => (
                     <SubNavButton
                         key={view}
                         label={view}

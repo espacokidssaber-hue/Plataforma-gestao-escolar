@@ -475,6 +475,9 @@ export interface ClassLogEntry {
     date: string; // YYYY-MM-DD
     subject: string;
     content: string;
+    authorId: number;
+    authorName: string;
+    lastEditedBy?: string; // e.g., "Admin"
 }
 
 export interface UploadedActivity {
@@ -535,6 +538,7 @@ export interface Expense {
 export enum CommunicationSubView {
     NOTICE_BOARD = 'Mural de Avisos',
     DIRECT_MESSAGES = 'Mensagens Diretas',
+    INTERNAL_MESSAGES = 'Mensagens Internas',
     BULK_MESSAGING = 'Disparos em Massa',
     MEETING_SCHEDULING = 'Agendamento de Reuniões',
 }
@@ -542,9 +546,11 @@ export enum CommunicationSubView {
 export interface Announcement {
     id: number;
     title: string;
-    author: string;
+    author: string; // author's username
+    authorId: number;
+    authorRole: UserRole;
     date: string;
-    audience: string;
+    recipientRole: UserRole | 'all';
     content: string;
     channels: {
       board: boolean;
@@ -572,6 +578,22 @@ export interface Conversation {
     messages: Message[];
 }
 
+// Internal Communication
+export interface InternalMessage {
+    id: number;
+    senderId: number;
+    text: string;
+    timestamp: string;
+    isRead: boolean;
+}
+
+export interface InternalConversation {
+    id: number;
+    participantIds: number[];
+    messages: InternalMessage[];
+}
+
+
 export interface Contact {
     name: string;
     email: string;
@@ -582,6 +604,14 @@ export interface WhatsAppGroup {
   id: number;
   name: string;
   link: string;
+}
+
+export interface Meeting {
+    id: number;
+    title: string;
+    attendeeName: string;
+    date: string;
+    status: 'Agendada' | 'Concluída' | 'Cancelada';
 }
 
 // Declarations & Atas

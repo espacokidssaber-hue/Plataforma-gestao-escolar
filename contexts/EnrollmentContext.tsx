@@ -3,9 +3,8 @@ import {
     SchoolInfo, EnrolledStudent, SchoolClass, Lead, Applicant, ManualEnrollmentData,
     NewExtemporaneousData, Contact, ClassLogEntry, Subject, UploadedActivity,
     SignedContract, LeadStatus, NewEnrollmentStatus, StudentLifecycleStatus,
-    DocumentStatus, SchoolUnit
+    DocumentStatus, SchoolUnit, AllSchedules, Educator
 } from '../types';
-import { MOCK_SUBJECTS } from '../data/subjectsData';
 
 // ==================================================================================
 // DATA VERSIONING AND MIGRATION
@@ -23,6 +22,8 @@ interface AppData {
     contacts: Contact[];
     classLogs: ClassLogEntry[];
     subjects: Subject[];
+    schedules: AllSchedules;
+    educators: Educator[];
     uploadedActivities: Record<number, UploadedActivity[]>;
     signedContracts: SignedContract[];
     crmOptions: { discountPrograms: string[] };
@@ -69,7 +70,9 @@ const getInitialData = (): AppData => {
         applicants: [],
         contacts: [],
         classLogs: [],
-        subjects: MOCK_SUBJECTS, // Keep subjects as a base configuration
+        subjects: [],
+        schedules: {},
+        educators: [],
         uploadedActivities: {},
         signedContracts: [],
         crmOptions: { discountPrograms: ['Nenhum', 'Bolsa Padrão (25%)', 'Convênio Empresa (15%)', 'Irmãos (10%)', 'Indicação (5%)'] },
@@ -113,11 +116,16 @@ interface EnrollmentContextType {
     contacts: Contact[];
     addContacts: (newContacts: Contact[]) => void;
     classLogs: ClassLogEntry[];
-    addClassLog: (log: Omit<ClassLogEntry, 'id'>) => void;
-    updateClassLog: (log: ClassLogEntry) => void;
+    addClassLog: (log: Omit<ClassLogEntry, 'id' | 'lastEditedBy'>) => void;
+    updateClassLog: (log: ClassLogEntry, editorName?: string) => void;
     deleteClassLog: (logId: number) => void;
     subjects: Subject[];
     addSubject: (subjectName: string) => Subject;
+    schedules: AllSchedules;
+    updateSchedules: (schedules: AllSchedules) => void;
+    educators: Educator[];
+    addEducator: (educator: Omit<Educator, 'id'>) => void;
+    updateEducator: (educator: Educator) => void;
     uploadedActivities: Record<number, UploadedActivity[]>;
     addUploadedActivity: (activity: Omit<UploadedActivity, 'id' | 'classId' | 'uploadDate'>, classId: number) => void;
     signedContracts: SignedContract[];
@@ -256,8 +264,24 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         });
     };
     
-    const addClassLog = (log: Omit<ClassLogEntry, 'id'>) => setAppData(prev => ({ ...prev, classLogs: [{ ...log, id: Date.now() }, ...prev.classLogs]}));
-    const updateClassLog = (log: ClassLogEntry) => setAppData(prev => ({ ...prev, classLogs: prev.classLogs.map(l => l.id === log.id ? log : l)}));
+    const addClassLog = (log: Omit<ClassLogEntry, 'id' | 'lastEditedBy'>) => setAppData(prev => ({ ...prev, classLogs: [{ ...log, id: Date.now() }, ...prev.classLogs]}));
+    
+    const updateClassLog = (log: ClassLogEntry, editorName?: string) => {
+        setAppData(prev => ({
+            ...prev,
+            classLogs: prev.classLogs.map(l => {
+                if (l.id === log.id) {
+                    const updatedLog = { ...log };
+                    if (editorName) {
+                        updatedLog.lastEditedBy = editorName;
+                    }
+                    return updatedLog;
+                }
+                return l;
+            })
+        }));
+    };
+
     const deleteClassLog = (logId: number) => setAppData(prev => ({...prev, classLogs: prev.classLogs.filter(l => l.id !== logId)}));
 
     const addSubject = (subjectName: string): Subject => {
@@ -269,6 +293,17 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         return newSubject;
     };
     
+    const updateSchedules = (schedules: AllSchedules) => setAppData(prev => ({ ...prev, schedules }));
+
+    const addEducator = (data: Omit<Educator, 'id'>) => {
+        const newEducator: Educator = { ...data, id: Date.now() };
+        setAppData(prev => ({ ...prev, educators: [newEducator, ...prev.educators] }));
+    };
+
+    const updateEducator = (educator: Educator) => {
+        setAppData(prev => ({ ...prev, educators: prev.educators.map(e => (e.id === educator.id ? educator : e)) }));
+    };
+
     const addUploadedActivity = (activity: Omit<UploadedActivity, 'id' | 'classId' | 'uploadDate'>, classId: number) => {
         const newActivity: UploadedActivity = { ...activity, id: Date.now(), classId, uploadDate: new Date().toISOString() };
         setAppData(prev => {
@@ -290,7 +325,8 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         updateEnrolledStudent, enrollStudentsFromImport, addSchoolClass, updateSchoolClass, addLead, updateLead,
         convertLeadToApplicant, addManualApplicant, submitPublicEnrollment, updateApplicant, finalizeEnrollment,
         highlightedApplicantId, setHighlightedApplicantId, addExtemporaneousApplicant, addContacts,
-        addClassLog, updateClassLog, deleteClassLog, addSubject, addUploadedActivity, uploadSignedContract
+        addClassLog, updateClassLog, deleteClassLog, addSubject, addUploadedActivity, uploadSignedContract,
+        updateSchedules, addEducator, updateEducator
     };
 
     return (

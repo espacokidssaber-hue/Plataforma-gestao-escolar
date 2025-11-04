@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Invoice, Expense, InvoiceStatus, ExpenseStatus } from '../../types';
 import ExportSebraeModal from './ExportSebraeModal';
 
-const MOCK_CASHFLOW_DATA = [
-    { month: 'Ago', revenue: 192000, expenses: 118000 },
-    { month: 'Set', revenue: 193500, expenses: 125000 },
-    { month: 'Out', revenue: 194800, expenses: 121300 },
-    { month: 'Nov', revenue: 189500, expenses: 132000 },
-];
+interface CashFlowProps {
+  invoices: Invoice[];
+  expenses: Expense[];
+}
 
 const Bar: React.FC<{ value: number; maxValue: number, type: 'revenue' | 'expenses' }> = ({ value, maxValue, type }) => {
     const heightPercentage = (value / maxValue) * 100;
@@ -22,15 +20,47 @@ const Bar: React.FC<{ value: number; maxValue: number, type: 'revenue' | 'expens
     );
 };
 
-const CashFlow: React.FC = () => {
+const CashFlow: React.FC<CashFlowProps> = ({ invoices, expenses }) => {
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    // Note: The main chart still uses mock data for demonstration.
-    // The export functionality, however, will use real data.
-    const maxValue = Math.max(...MOCK_CASHFLOW_DATA.flatMap(d => [d.revenue, d.expenses]));
-    
-    // These would come from a real financial context
-    const [invoices] = useState<Invoice[]>([]);
-    const [expenses] = useState<Expense[]>([]);
+
+    const cashFlowData = useMemo(() => {
+        const data: Record<string, { revenue: number, expenses: number }> = {};
+        const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        const now = new Date();
+
+        // Initialize last 4 months
+        for (let i = 3; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthKey = `${monthNames[date.getMonth()]}/${date.getFullYear().toString().slice(2)}`;
+            data[monthKey] = { revenue: 0, expenses: 0 };
+        }
+
+        // Populate with paid invoices
+        invoices.forEach(inv => {
+            if (inv.status === InvoiceStatus.PAID) {
+                const invDate = new Date(inv.dueDate); // Could also be paymentDate if available
+                const monthKey = `${monthNames[invDate.getMonth()]}/${invDate.getFullYear().toString().slice(2)}`;
+                if (data[monthKey]) {
+                    data[monthKey].revenue += inv.amount;
+                }
+            }
+        });
+
+        // Populate with paid expenses
+        expenses.forEach(exp => {
+            if (exp.status === ExpenseStatus.PAID && exp.paymentDate) {
+                const expDate = new Date(exp.paymentDate);
+                const monthKey = `${monthNames[expDate.getMonth()]}/${expDate.getFullYear().toString().slice(2)}`;
+                 if (data[monthKey]) {
+                    data[monthKey].expenses += exp.amount;
+                }
+            }
+        });
+
+        return Object.entries(data).map(([month, values]) => ({ month, ...values }));
+    }, [invoices, expenses]);
+
+    const maxValue = Math.max(...cashFlowData.flatMap(d => [d.revenue, d.expenses]), 1); // Avoid division by zero
 
     return (
         <>
@@ -56,7 +86,7 @@ const CashFlow: React.FC = () => {
                     </div>
                 </div>
                 <div className="h-96 bg-gray-50 dark:bg-gray-800/40 rounded-lg p-4 flex justify-around items-end border border-gray-200 dark:border-gray-700/50">
-                    {MOCK_CASHFLOW_DATA.map(data => (
+                    {cashFlowData.map(data => (
                         <div key={data.month} className="flex flex-col items-center h-full">
                             <div className="flex-grow flex items-end space-x-2">
                                 <Bar value={data.revenue} maxValue={maxValue} type="revenue" />

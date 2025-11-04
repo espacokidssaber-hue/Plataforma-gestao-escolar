@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FinancialSubView } from '../types';
+import { FinancialSubView, Invoice, Expense } from '../types';
 import FinancialOverview from './financial/FinancialOverview';
 import AccountsReceivable from './financial/AccountsReceivable';
 import AccountsPayable from './financial/AccountsPayable';
@@ -24,17 +24,20 @@ const SubNavButton: React.FC<{
 
 const Financial: React.FC = () => {
     const [activeSubView, setActiveSubView] = useState<FinancialSubView>(FinancialSubView.OVERVIEW);
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+
 
     const renderSubView = () => {
         switch (activeSubView) {
             case FinancialSubView.OVERVIEW:
-                return <FinancialOverview />;
+                return <FinancialOverview invoices={invoices} expenses={expenses} />;
             case FinancialSubView.ACCOUNTS_RECEIVABLE:
-                return <AccountsReceivable />;
+                return <AccountsReceivable invoices={invoices} setInvoices={setInvoices} />;
             case FinancialSubView.ACCOUNTS_PAYABLE:
-                return <AccountsPayable />;
+                return <AccountsPayable expenses={expenses} setExpenses={setExpenses} />;
             case FinancialSubView.CASH_FLOW:
-                return <CashFlow />;
+                return <CashFlow invoices={invoices} expenses={expenses} />;
             default:
                 return (
                     <div className="flex items-center justify-center h-64 bg-gray-100 dark:bg-gray-800/30 rounded-lg">

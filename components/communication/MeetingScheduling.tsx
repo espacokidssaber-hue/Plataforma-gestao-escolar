@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEnrollment } from '../../contexts/EnrollmentContext';
-import { MOCK_EDUCATORS } from '../../data/educatorsData';
 import NewMeetingModal from './NewMeetingModal';
-import BulkEducatorMeetingModal from './BulkEducatorMeetingModal';
 import PostScheduleConfirmationModal from './PostScheduleConfirmationModal';
-
-interface Meeting {
-    id: number;
-    title: string;
-    attendeeName: string;
-    date: string;
-    status: 'Agendada' | 'Concluída' | 'Cancelada';
-}
+import { Meeting } from '../../types';
 
 const MeetingScheduling: React.FC = () => {
-    const { enrolledStudents } = useEnrollment();
-    const [meetings, setMeetings] = useState<Meeting[]>([
-        { id: 1, title: 'Acompanhamento Pedagógico - Bento Ribeiro', attendeeName: 'Ricardo Ribeiro', date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: 'Agendada' },
-        { id: 2, title: 'Reunião de Alinhamento Semestral', attendeeName: 'Equipe de Educadoras', date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: 'Concluída' },
-    ]);
+    const { enrolledStudents, educators } = useEnrollment();
+    const [meetings, setMeetings] = useState<Meeting[]>(() => {
+        try {
+            const saved = localStorage.getItem('school_meetings');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error("Failed to parse meetings from localStorage", e);
+            return [];
+        }
+    });
+    
+    useEffect(() => {
+        localStorage.setItem('school_meetings', JSON.stringify(meetings));
+    }, [meetings]);
+
     const [isNewMeetingModalOpen, setIsNewMeetingModalOpen] = useState(false);
-    const [isBulkMeetingModalOpen, setIsBulkMeetingModalOpen] = useState(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [confirmationDetails, setConfirmationDetails] = useState<any>(null);
 
@@ -35,7 +35,6 @@ const MeetingScheduling: React.FC = () => {
             };
             setMeetings(prev => [newMeeting, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
             setIsNewMeetingModalOpen(false);
-            setIsBulkMeetingModalOpen(false);
             return;
         }
 
@@ -54,8 +53,13 @@ const MeetingScheduling: React.FC = () => {
         });
 
         setIsNewMeetingModalOpen(false);
-        setIsBulkMeetingModalOpen(false);
         setIsConfirmationModalOpen(true);
+    };
+
+    const handleCancelMeeting = (id: number) => {
+        if (window.confirm('Tem certeza que deseja cancelar esta reunião?')) {
+            setMeetings(prev => prev.map(m => m.id === id ? { ...m, status: 'Cancelada' } : m));
+        }
     };
 
     const StatusBadge: React.FC<{ status: Meeting['status'] }> = ({ status }) => {
@@ -72,9 +76,6 @@ const MeetingScheduling: React.FC = () => {
             <header className="flex flex-wrap justify-between items-center gap-4 mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Agendamento de Reuniões</h2>
                 <div className="flex items-center space-x-2">
-                    <button onClick={() => setIsBulkMeetingModalOpen(true)} className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-lg hover:bg-gray-500">
-                        Convidar Todas as Educadoras
-                    </button>
                     <button onClick={() => setIsNewMeetingModalOpen(true)} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500 flex items-center space-x-2">
                         + Nova Reunião
                     </button>
@@ -99,26 +100,24 @@ const MeetingScheduling: React.FC = () => {
                                 <td className="p-3 text-gray-600 dark:text-gray-300">{new Date(meeting.date).toLocaleString('pt-BR')}</td>
                                 <td className="p-3"><StatusBadge status={meeting.status} /></td>
                                 <td className="p-3 text-right">
-                                    <button className="text-sm text-red-500 hover:underline">Cancelar</button>
+                                    <button onClick={() => handleCancelMeeting(meeting.id)} disabled={meeting.status === 'Cancelada' || meeting.status === 'Concluída'} className="text-sm text-red-500 hover:underline disabled:text-gray-400 disabled:no-underline">
+                                        Cancelar
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                {meetings.length === 0 && (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma reunião agendada.</p>
+                )}
             </div>
             {isNewMeetingModalOpen && (
                 <NewMeetingModal 
                     students={enrolledStudents} 
-                    educators={MOCK_EDUCATORS}
+                    educators={educators}
                     onClose={() => setIsNewMeetingModalOpen(false)} 
                     onSchedule={handleSchedule} 
-                />
-            )}
-            {isBulkMeetingModalOpen && (
-                <BulkEducatorMeetingModal
-                    educators={MOCK_EDUCATORS}
-                    onClose={() => setIsBulkMeetingModalOpen(false)}
-                    onSchedule={handleSchedule}
                 />
             )}
             {isConfirmationModalOpen && (
