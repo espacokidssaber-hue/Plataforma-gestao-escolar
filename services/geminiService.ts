@@ -229,18 +229,29 @@ export const generateDocumentText = async (prompt: string, pdfBase64?: string): 
       pdfBase64,
       model: pdfBase64 ? 'gemini-2.5-flash' : undefined,
     });
-    const result = await response.json();
-    const fullText = result.text;
     
-    if (!fullText || fullText.trim() === '') {
+    // Handle cases where the response might be successful but empty, which would cause .json() to fail.
+    const responseBody = await response.text();
+    if (!responseBody) {
+        if (pdfBase64) return ""; // Gracefully handle empty response for PDF.
+        throw new Error("A IA retornou uma resposta vazia.");
+    }
+
+    const result = JSON.parse(responseBody);
+    const fullText = result.text ?? '';
+    
+    if (!fullText.trim()) {
         if (pdfBase64) {
-             throw new Error("A IA não conseguiu extrair texto do PDF fornecido.");
+             // This is the desired outcome for an unreadable PDF (e.g., image-only).
+             return "";
         }
+        // For non-PDF tasks, an empty text is an error.
         throw new Error("A IA retornou uma resposta vazia. Tente novamente com um tópico mais específico.");
     }
     return fullText;
   } catch (error) {
     console.error("Error generating document text from Gemini via proxy:", error);
+    // The calling function (extractEnrolledStudentsFromPdf) will catch this and show the user-facing error.
     if (error instanceof Error) { throw error; }
     throw new Error("Falha ao se comunicar com o serviço de IA. Por favor, tente novamente mais tarde.");
   }
