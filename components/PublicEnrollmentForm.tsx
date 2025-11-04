@@ -15,6 +15,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
     const { submitPublicEnrollment } = useEnrollment();
     const [step, setStep] = useState(1);
     const [studentName, setStudentName] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState(''); // Added for duplicate check
     const [guardian, setGuardian] = useState<Guardian>({ name: '', cpf: '', rg: '', phone: '', email: '' });
     const [healthInfo, setHealthInfo] = useState<HealthInfo>({ allergies: '', medications: '', emergencyContactName: '', emergencyContactPhone: ''});
     const [documents, setDocuments] = useState<Record<string, { file: File, base64: string }>>({});
@@ -28,6 +29,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
         const newErrors: Record<string, string> = {};
         if (currentStep === 1) {
             if (!studentName.trim()) newErrors.studentName = 'O nome do aluno é obrigatório.';
+            if (!dateOfBirth.trim()) newErrors.dateOfBirth = 'A data de nascimento é obrigatória.';
             if (!guardian.name.trim()) newErrors.guardianName = 'O nome do responsável é obrigatório.';
             if (!guardian.cpf.trim()) newErrors.guardianCpf = 'O CPF é obrigatório.';
             if (!guardian.phone.trim()) newErrors.guardianPhone = 'O telefone é obrigatório.';
@@ -87,7 +89,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
         setTimeout(() => {
             try {
                 const submittedDocs = Object.entries(documents).map(([name, docData]) => ({ name, fileUrl: (docData as { file: File; base64: string }).base64 }));
-                submitPublicEnrollment({ studentName, guardian, healthInfo, documents: submittedDocs });
+                submitPublicEnrollment({ studentName, dateOfBirth, guardian, healthInfo, documents: submittedDocs });
                 setSubmitted(true);
             } catch (error) {
                 if (error instanceof Error) {
@@ -101,7 +103,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
         }, 1500);
     };
     
-    const isStepValid = useMemo(() => validateStep(step), [step, studentName, guardian, documents, healthInfo]);
+    const isStepValid = useMemo(() => validateStep(step), [step, studentName, dateOfBirth, guardian, documents, healthInfo]);
 
     const renderStep = () => {
         const getInputClass = (fieldName: string) => `w-full bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white border ${errors[fieldName] ? 'border-red-500' : 'border-gray-300 dark:border-transparent'}`;
@@ -112,10 +114,17 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
                 return (
                     <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">1. Dados do Aluno e Responsável</h3>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nome Completo do Aluno</label>
-                            <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)} className={getInputClass('studentName')} />
-                            <ErrorMessage field="studentName"/>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="col-span-2">
+                                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nome Completo do Aluno</label>
+                                <input type="text" value={studentName} onChange={e => setStudentName(e.target.value)} className={getInputClass('studentName')} />
+                                <ErrorMessage field="studentName"/>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Data de Nascimento</label>
+                                <input type="date" value={dateOfBirth} onChange={e => setDateOfBirth(e.target.value)} className={getInputClass('dateOfBirth')} />
+                                <ErrorMessage field="dateOfBirth"/>
+                            </div>
                         </div>
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
                              <input type="text" placeholder="Nome do Responsável Financeiro" value={guardian.name} onChange={e => setGuardian(g => ({...g, name: e.target.value}))} className={`${getInputClass('guardianName')} mb-2`} />
@@ -150,7 +159,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
                                 <div key={docName} className={`p-2 bg-gray-100 dark:bg-gray-700/50 rounded-lg ${errors[docName] ? 'border border-red-500' : ''}`}>
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-700 dark:text-gray-300 text-sm">{docName}{isRequired && <span className="text-red-400 ml-1">*</span>}</span>
-                                        <button onClick={() => fileInputRefs.current[docName]?.click()} className={`px-3 py-1 text-xs rounded-md ${documents[docName] ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>
+                                        <button type="button" onClick={() => fileInputRefs.current[docName]?.click()} className={`px-3 py-1 text-xs rounded-md ${documents[docName] ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>
                                             {documents[docName] ? 'Enviado' : 'Anexar'}
                                         </button>
                                         <input type="file" ref={el => { if (el) fileInputRefs.current[docName] = el; }} onChange={(e) => handleFileChange(e, docName)} className="hidden" />
@@ -201,7 +210,7 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">A secretaria fará a análise dos seus dados e documentos e entrará em contato em breve.</p>
                         </main>
                         <footer className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-                            <button onClick={() => { onSuccess(); onClose(); }} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500">
+                            <button type="button" onClick={() => { onSuccess(); onClose(); }} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-500">
                                 Fechar
                             </button>
                         </footer>
@@ -216,10 +225,10 @@ const PublicEnrollmentForm: React.FC<PublicEnrollmentFormProps> = ({ onClose, on
                                 <span className="text-sm text-gray-500 dark:text-gray-400">Etapa {step} de 3</span>
                             </div>
                             <div className="space-x-2">
-                                {step > 1 && <button onClick={() => setStep(s => s - 1)} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500">Voltar</button>}
-                                {step < 3 && <button onClick={handleNextStep} className="px-4 py-2 bg-teal-600 rounded-lg text-white hover:bg-teal-500">Avançar</button>}
+                                {step > 1 && <button type="button" onClick={() => setStep(s => s - 1)} className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500">Voltar</button>}
+                                {step < 3 && <button type="button" onClick={handleNextStep} className="px-4 py-2 bg-teal-600 rounded-lg text-white hover:bg-teal-500">Avançar</button>}
                                 {step === 3 && 
-                                    <button onClick={handleSubmit} disabled={isSubmitting} className="px-4 py-2 bg-green-600 rounded-lg text-white font-semibold w-36 disabled:bg-gray-500 disabled:cursor-wait hover:bg-green-500">
+                                    <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="px-4 py-2 bg-green-600 rounded-lg text-white font-semibold w-36 disabled:bg-gray-500 disabled:cursor-wait hover:bg-green-500">
                                         {isSubmitting ? (
                                             <div className="flex justify-center items-center">
                                                 <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

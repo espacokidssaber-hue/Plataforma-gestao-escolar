@@ -14,6 +14,7 @@ export interface User {
 const CURRENT_AUTH_VERSION = "1.1.0";
 
 const migrateAuthData = () => {
+    // Check for very old, unversioned data and migrate it first
     const legacyUserKey = 'app_users';
     const legacyPasswordKey = 'app_passwords';
     
@@ -24,8 +25,8 @@ const migrateAuthData = () => {
         
         const initialData = {
             users: users.length > 0 ? users : [
-                { id: 1000, username: 'admin', role: 'admin' },
-                { id: 1001, username: 'secretaria', role: 'secretary' },
+                { id: 1000, username: 'admin', role: 'admin' as UserRole },
+                { id: 1001, username: 'secretaria', role: 'secretary' as UserRole },
             ],
             passwords: Object.keys(passwords).length > 0 ? passwords : {
                 admin: '123',
@@ -48,20 +49,25 @@ const migrateAuthData = () => {
 
     const storedDataJSON = localStorage.getItem('auth_data');
     if (storedDataJSON) {
-        const storedData = JSON.parse(storedDataJSON);
-        if (storedData.version === CURRENT_AUTH_VERSION) {
-            return storedData.data;
-        } else {
-             console.warn(`Auth data version mismatch. Found ${storedData.version}, expected ${CURRENT_AUTH_VERSION}.`);
-             return storedData.data; // Future migrations here
+        try {
+            const storedData = JSON.parse(storedDataJSON);
+            if (storedData.version === CURRENT_AUTH_VERSION) {
+                return storedData.data;
+            } else {
+                 console.warn(`Auth data version mismatch. Found ${storedData.version}, expected ${CURRENT_AUTH_VERSION}. Applying migrations...`);
+                 // Future migration logic would go here. For now, we just use the data as is.
+                 return storedData.data;
+            }
+        } catch (e) {
+            console.error("Failed to parse auth_data from localStorage, resetting to default.", e);
         }
     }
     
     // Default initial state if nothing exists
     return {
         users: [
-            { id: 1000, username: 'admin', role: 'admin' },
-            { id: 1001, username: 'secretaria', role: 'secretary' },
+            { id: 1000, username: 'admin', role: 'admin' as UserRole },
+            { id: 1001, username: 'secretaria', role: 'secretary' as UserRole },
         ],
         passwords: {
             admin: '123',

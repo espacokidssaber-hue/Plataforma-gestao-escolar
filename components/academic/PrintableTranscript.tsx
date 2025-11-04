@@ -15,7 +15,7 @@ const PrintableTranscript: React.FC<StudentTranscriptData> = ({ student, schoolI
     const cepPart = (schoolInfo.address || '').split('CEP: ')[1];
     const cep = cepPart ? cepPart.split(' ')[0] : '';
 
-    const disciplines = ['ARTES', 'CIÊNCIAS', 'GEOGRAFIA', 'HISTÓRIA', 'INGLÊS', 'MATEMÁTICA', 'PORTUGUÊS', 'SOCIOEMOCIONAL'];
+    const disciplines = ['ARTES', 'CIÊNCIAS', 'GEOGRAFIA', 'HISTÓRIA', 'INGLÊS', 'MATEMÁTICA', 'PORTUGÊS', 'SOCIOEMOCIONAL'];
     const gradeLevels1 = ['1º', '2º', '3º', '4º', '5º'];
     const gradeLevels2 = ['6º', '7º', '8º', '9º'];
 

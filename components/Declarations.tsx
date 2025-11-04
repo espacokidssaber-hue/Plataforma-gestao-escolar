@@ -3,7 +3,6 @@ import { DeclarationTemplate, SchoolInfo, EnrolledStudent, StudentLifecycleStatu
 import { generateDocumentText } from '../services/geminiService';
 import PrintableDeclaration from './declarations/PrintableDeclaration';
 import ManageDeclarationTypesModal from './declarations/ManageDeclarationTypesModal';
-// FIX: Changed import path for useSchoolInfo from App.tsx to EnrollmentContext.tsx as it is exported from there.
 import { useSchoolInfo } from '../contexts/EnrollmentContext';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 
@@ -197,6 +196,7 @@ const Declarations: React.FC = () => {
                 {isManageTypesModalOpen && <ManageDeclarationTypesModal templates={declarationTemplates} onClose={() => setIsManageTypesModalOpen(false)} onSave={handleSaveTemplates} />}
             </div>
 
+            {/* Este container agora fica fora do principal para evitar o display:none da impressão */}
             <div className="print-container">
                 {printContent && <PrintableDeclaration {...printContent} />}
             </div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { streamDocumentText } from '../services/geminiService';
 import { useEnrollment } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
-// FIX: Changed import path for useSchoolInfo from App.tsx to EnrollmentContext.tsx as it is exported from there.
 import { useSchoolInfo } from '../contexts/EnrollmentContext';
 import { SchoolInfo } from '../types';
 
