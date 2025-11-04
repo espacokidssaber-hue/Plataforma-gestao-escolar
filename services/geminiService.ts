@@ -104,36 +104,14 @@ export interface ExtractedStudent {
 }
 
 export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise<ExtractedStudent[]> => {
-    // Passo 1: Extrair o texto bruto do PDF.
-    const textExtractionPrompt = `Extraia todo o texto deste documento PDF. Preserve a formatação de parágrafos e quebras de linha o máximo possível. Retorne apenas o texto extraído, sem adicionar comentários, resumos ou qualquer texto introdutório.`;
-    
-    let rawText: string;
-    try {
-        rawText = await generateDocumentText(textExtractionPrompt, pdfBase64);
-    } catch (error) {
-         console.error("Error in Step 1 (Text Extraction from PDF):", error);
-         throw new Error("A IA falhou na leitura inicial do arquivo PDF. Verifique se o arquivo não está corrompido ou se é apenas uma imagem.");
-    }
+    // Combina a extração de texto e a geração de JSON em uma única chamada.
+    const combinedPrompt = `
+        **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos a partir do documento PDF de um relatório de matrículas.**
 
-    if (!rawText || rawText.trim().length < 20) {
-        // Retorna um array vazio em vez de lançar um erro para uma melhor experiência do usuário
-        console.warn("O documento PDF parece estar vazio ou ilegível. Nenhum texto foi extraído.");
-        return [];
-    }
-
-    // Passo 2: Usar o texto extraído para gerar o JSON.
-    const jsonGenerationPrompt = `
-        **TAREFA CRÍTICA E PRIORITÁRIA: Extrair uma lista COMPLETA de TODOS os alunos a partir do texto de um relatório de matrículas.**
-
-        Você é um assistente de secretaria escolar extremamente meticuloso e preciso. Sua responsabilidade é garantir que **NENHUM** aluno seja omitido durante a extração de dados.
-
-        **TEXTO EXTRAÍDO DO RELATÓRIO:**
-        ---
-        ${rawText}
-        ---
+        Você é um assistente de secretaria escolar extremamente meticuloso e preciso. Sua responsabilidade é garantir que **NENHUM** aluno seja omitido durante a extração de dados do PDF.
 
         **Instruções de Processamento:**
-        1.  **Análise do Texto:** Analise o texto de forma sequencial. Cada linha ou bloco que parece ser um registro de aluno deve ser processado.
+        1.  **Análise do Documento:** Analise o PDF fornecido. Cada linha ou bloco que parece ser um registro de aluno deve ser processado.
         2.  **Extração Obrigatória:** Mesmo que um aluno tenha informações faltando, você **DEVE** extrair o nome e os dados disponíveis. Não descarte um registro por dados incompletos.
         3.  **Mapeamento de Campos:** Use os seguintes cabeçalhos como guia para preencher o JSON:
             - NOME DO ALUNO -> studentName
@@ -160,7 +138,7 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
             - Se não encontrar, use 'Matriz' como padrão.
 
         **Formato de Saída:**
-        - Retorne um array de objetos JSON. Se o texto não contiver uma lista de alunos, retorne um array JSON vazio: \`[]\`.
+        - Retorne um array de objetos JSON. Se o documento não contiver uma lista de alunos, ou for ilegível (como uma imagem), retorne um array JSON vazio: \`[]\`.
     `;
 
     const schema = {
@@ -191,32 +169,32 @@ export const extractEnrolledStudentsFromPdf = async (pdfBase64: string): Promise
     
     try {
         const response = await callGeminiApi({
-            prompt: jsonGenerationPrompt,
+            prompt: combinedPrompt,
+            pdfBase64,
             schema,
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-pro', // Usando um modelo mais robusto para a tarefa combinada
             stream: false
         });
         const jsonText = await response.text();
         
         if (!jsonText) return [];
 
-        // Limpeza robusta de JSON, removendo possíveis blocos de código markdown
+        // Limpa possíveis blocos de código markdown que a IA pode retornar
         const cleanedJsonText = jsonText.trim().replace(/^```(json)?\s*/, '').replace(/\s*```$/, '');
         
         const parsedData = JSON.parse(cleanedJsonText);
         
         if (Array.isArray(parsedData)) {
             return parsedData;
-        } else if (typeof parsedData === 'object' && Object.keys(parsedData).length === 0) {
-            return []; // Lida com o caso de objeto vazio {}
         }
         
-        console.warn("A IA retornou um objeto JSON que não é um array. Isso é inesperado. Retornando um array vazio.", parsedData);
+        console.warn("A IA retornou um objeto JSON que não é um array. Retornando um array vazio.", parsedData);
         return [];
 
     } catch (error) {
-        console.error("Error in Step 2 (JSON Generation):", error);
-        throw new Error("A IA leu o PDF, mas falhou ao organizar os dados dos alunos. Verifique a estrutura do documento.");
+        console.error("Erro na extração de alunos do PDF:", error);
+        // Nova mensagem de erro, mais genérica e útil para o usuário
+        throw new Error("A IA falhou ao processar o arquivo PDF. Verifique se o arquivo não está corrompido, se contém texto legível e tente novamente.");
     }
 };
 
