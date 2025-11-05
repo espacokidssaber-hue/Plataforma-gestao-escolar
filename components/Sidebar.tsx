@@ -1,6 +1,5 @@
 import React from 'react';
 import { View } from '../types';
-// FIX: Corrected import path for useSchoolInfo from EnrollmentContext
 import { useSchoolInfo } from '../contexts/EnrollmentContext';
 import { useAuth } from '../contexts/AuthContext';
 

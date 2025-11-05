@@ -21,7 +21,6 @@ const StatusBadge: React.FC<{ status: StudentLifecycleStatus }> = ({ status }) =
 
 const Students: React.FC = () => {
     const { enrolledStudents, updateEnrolledStudent, classes } = useEnrollment();
-    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [studentForForm, setStudentForForm] = useState<EnrolledStudent | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,22 +28,15 @@ const Students: React.FC = () => {
     const [selectedClassForDownload, setSelectedClassForDownload] = useState<string>('');
     const [isDownloading, setIsDownloading] = useState(false);
 
-    const studentsForRole = useMemo(() => {
-        if (user?.role === 'secretary' && user.unit) {
-            return enrolledStudents.filter(student => student.unit === user.unit);
-        }
-        return enrolledStudents;
-    }, [enrolledStudents, user]);
-
     const filteredStudents = useMemo(() => {
         if (!searchTerm.trim()) {
-            return studentsForRole;
+            return enrolledStudents;
         }
         const lowercasedFilter = searchTerm.toLowerCase();
-        return studentsForRole.filter(student =>
+        return enrolledStudents.filter(student =>
             student.name.toLowerCase().includes(lowercasedFilter)
         );
-    }, [studentsForRole, searchTerm]);
+    }, [enrolledStudents, searchTerm]);
 
     const handleAvatarClick = (studentId: number) => {
         setStudentToUpdateAvatar(studentId);

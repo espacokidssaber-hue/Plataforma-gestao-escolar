@@ -27,13 +27,9 @@ const migrateAuthData = () => {
         const initialData = {
             users: users.length > 0 ? users.map((u: any) => ({...u, unit: u.role === 'secretary' ? SchoolUnit.MATRIZ : undefined})) : [
                 { id: 1000, username: 'admin', role: 'admin' as UserRole },
-                { id: 1001, username: 'secretaria_matriz', role: 'secretary' as UserRole, unit: SchoolUnit.MATRIZ },
-                { id: 1002, username: 'secretaria_filial', role: 'secretary' as UserRole, unit: SchoolUnit.FILIAL },
             ],
             passwords: Object.keys(passwords).length > 0 ? passwords : {
                 admin: '123',
-                secretaria_matriz: '123',
-                secretaria_filial: '123'
             }
         };
 
@@ -76,13 +72,9 @@ const migrateAuthData = () => {
     return {
         users: [
             { id: 1000, username: 'admin', role: 'admin' as UserRole },
-            { id: 1001, username: 'secretaria_matriz', role: 'secretary' as UserRole, unit: SchoolUnit.MATRIZ },
-            { id: 1002, username: 'secretaria_filial', role: 'secretary' as UserRole, unit: SchoolUnit.FILIAL },
         ],
         passwords: {
             admin: '123',
-            secretaria_matriz: '123',
-            secretaria_filial: '123'
         },
     };
 };

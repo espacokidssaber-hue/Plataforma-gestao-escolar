@@ -6,10 +6,4 @@ const stringToColor = (str: string): string => { let hash = 0; if (!str) return 
 const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
 // --- AVATAR UTILS END ---
 
-export const MOCK_EDUCATORS: Educator[] = [
-    { id: 1, name: 'Prof. Ana Silva', avatar: generateAvatar('Ana Silva'), role: 'Professora - Infantil', subjects: ['Artes', 'Psicomotricidade'], status: EducatorStatus.ACTIVE, hireDate: '2020-02-10' },
-    { id: 2, name: 'Prof. Carlos Souza', avatar: generateAvatar('Carlos Souza'), role: 'Professor - Fundamental I', subjects: ['Matemática', 'Ciências'], status: EducatorStatus.ACTIVE, hireDate: '2018-03-15' },
-    { id: 3, name: 'Prof. Beatriz Lima', avatar: generateAvatar('Beatriz Lima'), role: 'Professora - Fundamental I', subjects: ['Português', 'História'], status: EducatorStatus.ACTIVE, hireDate: '2021-08-01' },
-    { id: 4, name: 'Mariana Costa', avatar: generateAvatar('Mariana Costa'), role: 'Coordenadora Pedagógica', subjects: [], status: EducatorStatus.ACTIVE, hireDate: '2015-01-20' },
-    { id: 5, name: 'Ricardo Pereira', avatar: generateAvatar('Ricardo Pereira'), role: 'Professor - Ed. Física', subjects: ['Educação Física'], status: EducatorStatus.INACTIVE, hireDate: '2019-05-01' },
-];
+export const MOCK_EDUCATORS: Educator[] = [];

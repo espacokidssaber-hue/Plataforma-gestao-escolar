@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { StudentTranscriptData, SchoolInfo, EnrichedEnrolledStudent } from '../../types';
 import { MOCK_ACADEMIC_HISTORY } from '../../data/academicHistoryData';
 import PrintableTranscript from './PrintableTranscript';
-// FIX: Corrected import path for EnrollmentContext
-import { useSchoolInfo } from '../../contexts/EnrollmentContext';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { useSchoolInfo, useEnrollment } from '../../contexts/EnrollmentContext';
 
 // html2pdf is loaded globally from index.html
 declare const html2pdf: any;

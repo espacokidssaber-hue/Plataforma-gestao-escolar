@@ -5,7 +5,6 @@ import { View } from './types';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotificationBell from './components/NotificationBell';
 import { ThemeProvider } from './contexts/ThemeContext';
-// FIX: Corrected import path for EnrollmentContext
 import { EnrollmentProvider } from './contexts/EnrollmentContext';
 import PublicEnrollmentForm from './components/PublicEnrollmentForm';
 import Login from './components/Login';
@@ -21,7 +20,6 @@ const Communication = React.lazy(() => import('./components/Communication'));
 const Reports = React.lazy(() => import('./components/Reports'));
 const Declarations = React.lazy(() => import('./components/Declarations'));
 const Minutes = React.lazy(() => import('./components/Minutes'));
-// FIX: Corrected import path for Archive component
 const Archive = React.lazy(() => import('./components/archive/Archive'));
 const Settings = React.lazy(() => import('./components/Settings'));
 const SignaturesAndContracts = React.lazy(() => import('./components/SignaturesAndContracts'));
@@ -37,7 +35,7 @@ const LoadingFallback: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [activeView, setActiveView] = useState<View>(View.DASHBOARD);
     const [isChatbotOpen, setIsChatbotOpen] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -60,8 +58,18 @@ const AppContent: React.FC = () => {
         case View.STUDENTS:
           return <Students />;
         case View.ACADEMIC:
-          return <Academic />;
+          return <Academic setActiveView={setActiveView} />;
         case View.FINANCIAL:
+          if (user?.role !== 'admin') {
+            return (
+                <div className="flex items-center justify-center h-full text-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-red-500">Acesso Negado</h1>
+                        <p className="text-gray-500 dark:text-gray-400 mt-2">Você não tem permissão para visualizar a área financeira.</p>
+                    </div>
+                </div>
+            );
+          }
           return <Financial />;
         case View.COMMUNICATION:
           return <Communication />;

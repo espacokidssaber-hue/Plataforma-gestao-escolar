@@ -9,12 +9,8 @@ import { EnrollmentReports } from './EnrollmentReports';
 import { EnrollmentSettings } from './EnrollmentSettings';
 import PublicLinkModal from './PublicLinkModal';
 import PublicEnrollmentForm from './PublicEnrollmentForm';
-// FIX: Corrected import path for EnrollmentContext
-import { useEnrollment } from '../contexts/EnrollmentContext';
-import { extractEnrolledStudentsFromPdf, ExtractedStudent } from '../services/geminiService';
+import { useEnrollment, useSchoolInfo } from '../contexts/EnrollmentContext';
 import * as XLSX from 'xlsx';
-// FIX: Corrected import path for EnrollmentContext
-import { useSchoolInfo } from '../contexts/EnrollmentContext';
 
 const SubNavButton: React.FC<{
     label: string;
@@ -48,33 +44,76 @@ const stringToSchoolUnit = (unitString?: string): SchoolUnit => {
     return SchoolUnit.MATRIZ; // Default
 };
 
+const findClassForStudent = (
+    serieOrFullName: string | undefined, 
+    turma: string | undefined, 
+    unit: SchoolUnit, 
+    allClasses: SchoolClass[]
+): SchoolClass | undefined => {
+    if (!serieOrFullName) return undefined;
+
+    const normalizedName = serieOrFullName.trim();
+    const normalizedTurma = turma?.trim() || '';
+
+    // Sanitize input by removing common separators, accents, and extra spaces, then converting to lowercase
+    const sanitize = (str: string) => 
+        str
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+        .toLowerCase()
+        .replace(/[\s-ºª.:]/g, '')
+        .trim();
+
+    // --- STRATEGY 1: Match on combined full name ---
+    // This handles cases like:
+    // 1. serieOrFullName="1º Ano A", turma=""
+    // 2. serieOrFullName="1º Ano", turma="A"
+    const combinedInput = sanitize(`${normalizedName} ${normalizedTurma}`);
+
+    // Try to find a match in the student's specified unit first
+    const exactMatchInUnit = allClasses.find(c => sanitize(c.name) === combinedInput && c.unit === unit);
+    if (exactMatchInUnit) {
+        return exactMatchInUnit;
+    }
+    
+    // Fallback: If no match in the specified unit, try to find in ANY unit.
+    // This is useful if the unit in the CSV is wrong but the class name is correct.
+    const exactMatchAnyUnit = allClasses.find(c => sanitize(c.name) === combinedInput);
+    if (exactMatchAnyUnit) {
+        return exactMatchAnyUnit;
+    }
+
+    // --- STRATEGY 2: If we are here, maybe the CSV only has the grade, not the class letter ---
+    // Example: CSV has "1º Ano", but classes are "1º Ano A", "1º Ano B". We can't decide.
+    // However, if there's only ONE class for that grade, we can match it.
+    const sanitizedGradeOnly = sanitize(normalizedName);
+    const classesWithSameGrade = allClasses.filter(c => sanitize(c.grade) === sanitizedGradeOnly && c.unit === unit);
+    if (classesWithSameGrade.length === 1) {
+        return classesWithSameGrade[0];
+    }
+    
+    // Fallback for grade-only match in any unit
+    const classesWithSameGradeAnyUnit = allClasses.filter(c => sanitize(c.grade) === sanitizedGradeOnly);
+    if (classesWithSameGradeAnyUnit.length === 1) {
+        return classesWithSameGradeAnyUnit[0];
+    }
+    
+    return undefined; // No definitive match found
+};
+
 
 const Admissions: React.FC = () => {
     const [activeSubView, setActiveSubView] = useState<EnrollmentSubView>(EnrollmentSubView.NEW_ENROLLMENTS);
     const [highlightedClassId, setHighlightedClassId] = useState<number | null>(null);
     const [isPublicLinkModalOpen, setIsPublicLinkModalOpen] = useState(false);
-    const [isPdfImporting, setIsPdfImporting] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [importStatus, setImportStatus] = useState('');
     const [isExporting, setIsExporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { enrollStudentsFromImport, classes, addContacts, enrolledStudents } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
 
-    const handlePdfImportClick = () => {
+    const handleImportClick = () => {
         fileInputRef.current?.click();
-    };
-    
-    const fileToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                const result = reader.result as string;
-                // remove the header `data:application/pdf;base64,`
-                resolve(result.split(',')[1]);
-            };
-            reader.onerror = error => reject(error);
-        });
     };
 
     const handleExportSpreadsheet = async () => {
@@ -142,160 +181,171 @@ const Admissions: React.FC = () => {
         }
     };
 
-    const findClassForStudent = (pdfSerie: string | undefined, pdfTurma: string | undefined, unit: SchoolUnit, allClasses: SchoolClass[]): SchoolClass | undefined => {
-        if (!pdfSerie) return undefined;
-    
-        const normalizedSerie = pdfSerie.toLowerCase().trim();
-        const normalizedTurma = pdfTurma?.toUpperCase().trim() || '';
-    
-        // Regex to capture grade (number + "ano" or "infantil" + number or "inf" + number)
-        const gradeMatch = normalizedSerie.match(/(\d+)\s*º?\s*ano|infantil\s*(\d+)|inf\s*(\d+)/);
-        
-        if (!gradeMatch) {
-            // Fallback for names that don't match the regex pattern
-            const combinedName = `${normalizedSerie} ${normalizedTurma}`.replace(/[\s-ºª.:]/g, '').trim();
-            return allClasses.find(c => {
-               const normalizedClassName = c.name.toLowerCase().replace(/[\s-ºª.:]/g, '');
-               return normalizedClassName === combinedName && c.unit === unit;
-            });
-        }
-    
-        let targetGrade: string;
-        if (gradeMatch[1]) { // e.g., "3 ano" or "3º ano"
-            targetGrade = `${gradeMatch[1]}º Ano`;
-        } else { // e.g., "infantil 5" or "inf 5"
-            targetGrade = `Infantil ${gradeMatch[2] || gradeMatch[3]}`;
-        }
-        
-        if (!normalizedTurma) return undefined;
-    
-        // Try to find an exact match first
-        const perfectMatch = allClasses.find(c => 
-            c.grade === targetGrade &&
-            c.name.toUpperCase().endsWith(` ${normalizedTurma}`) && // Check if name ends with ' A', ' B' etc.
-            c.unit === unit
-        );
-        if (perfectMatch) return perfectMatch;
-    
-        // Fallback: If no perfect match on unit, find one with matching grade and turma in any unit.
-        // This handles cases where a student might be allocated to a different unit's class.
-        const fallbackMatch = allClasses.find(c => 
-            c.grade === targetGrade &&
-            c.name.toUpperCase().endsWith(` ${normalizedTurma}`)
-        );
-        return fallbackMatch;
-    };
 
-
-    const handlePdfFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCsvFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (file.type !== 'application/pdf') {
-            alert('Por favor, selecione um arquivo PDF.');
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            alert('Por favor, selecione um arquivo CSV.');
             return;
         }
 
-        setIsPdfImporting(true);
-        setImportStatus('Lendo arquivo...');
+        setIsImporting(true);
+        setImportStatus('Lendo arquivo CSV...');
 
         try {
-            const base64Data = await fileToBase64(file);
-            setImportStatus('Analisando com IA...');
-            const extractedData = await extractEnrolledStudentsFromPdf(base64Data);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonFromSheet: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-            if (!extractedData || extractedData.length === 0) {
-                 throw new Error("Nenhum aluno foi encontrado no PDF. Verifique o formato do arquivo.");
-            }
-            
-            setImportStatus('Processando alunos...');
-            await new Promise(resolve => setTimeout(resolve, 50)); // Small delay for UI update
-
-            const newStudents: EnrolledStudent[] = extractedData.map((item: ExtractedStudent, index: number): EnrolledStudent => {
-                const studentUnit = stringToSchoolUnit(item.schoolUnit);
-                const foundClass = findClassForStudent(item.className, item.studentTurma, studentUnit, classes);
-
-                const guardian: Guardian = {
-                    name: item.guardianName || '',
-                    cpf: item.guardianCpf || '',
-                    phone: item.guardianPhone || '',
-                    email: item.guardianEmail || '',
-                    rg: '', // Not in the file
-                };
-
-                const address: StudentAddress = {
-                    street: item.addressStreet || '',
-                    number: item.addressNumber || '',
-                    complement: item.addressComplement,
-                    neighborhood: item.addressNeighborhood || '',
-                    city: item.addressCity || '',
-                    state: item.addressState || '',
-                    zip: item.addressZip || '',
-                };
-
-                let isoDateOfBirth: string | undefined = undefined;
-                if (item.dateOfBirth) {
-                    const dateParts = item.dateOfBirth.split('/');
-                    if (dateParts.length === 3) {
-                        const [day, month, year] = dateParts;
-                        const date = new Date(`${year}-${month}-${day}T00:00:00`);
-                        // Check for invalid date
-                        if (!isNaN(date.getTime())) {
-                            isoDateOfBirth = date.toISOString().split('T')[0];
-                        }
+                    if (jsonFromSheet.length === 0) {
+                        throw new Error("O arquivo CSV está vazio ou em um formato não reconhecido.");
                     }
+
+                    setImportStatus('Processando alunos...');
+
+                    const headerMap: { [key: string]: string[] } = {
+                        studentName: ['nome do aluno', 'aluno', 'nome completo do aluno', 'nome'],
+                        dateOfBirth: ['data de nascimento', 'nascimento', 'data de nascimento do aluno'],
+                        className: ['série', 'serie', 'ano', 'série de interesse', 'turma', 'classe'],
+                        studentTurma: ['turma'],
+                        schoolUnit: ['unidade', 'unidade escolar'],
+                        guardianName: ['nome do responsável', 'responsável', 'responsavel', 'nome completo do responsável financeiro'],
+                        guardianCpf: ['cpf do responsável', 'cpf', 'cpf do responsável financeiro'],
+                        guardianPhone: ['telefone do responsável', 'telefone', 'telefone do contratante'],
+                        guardianEmail: ['email do responsável', 'email', 'e-mail', 'email do contratante'],
+                        addressStreet: ['endereço', 'logradouro'],
+                        addressNumber: ['número', 'numero'],
+                        addressComplement: ['complemento'],
+                        addressNeighborhood: ['bairro'],
+                        addressCity: ['cidade'],
+                        addressState: ['uf', 'estado'],
+                        addressZip: ['cep'],
+                    };
+
+                    const getColumnValue = (row: any, key: keyof typeof headerMap): string => {
+                        const possibleHeaders = headerMap[key];
+                        for (const header of possibleHeaders) {
+                            if (row[header] !== undefined) return String(row[header]);
+                            // Check for case-insensitive headers
+                            const rowHeader = Object.keys(row).find(rh => rh.toLowerCase().trim() === header);
+                            if (rowHeader) return String(row[rowHeader]);
+                        }
+                        return '';
+                    };
+
+                    const newStudents: EnrolledStudent[] = jsonFromSheet.map((row: any, index: number): EnrolledStudent => {
+                        const studentName = getColumnValue(row, 'studentName');
+                        const studentUnit = stringToSchoolUnit(getColumnValue(row, 'schoolUnit'));
+                        
+                        let classNameFromCsv = getColumnValue(row, 'className');
+                        let turmaFromCsv = getColumnValue(row, 'studentTurma');
+
+                        if (classNameFromCsv === turmaFromCsv) {
+                            turmaFromCsv = '';
+                        }
+
+                        const foundClass = findClassForStudent(classNameFromCsv, turmaFromCsv, studentUnit, classes);
+
+                        const guardian: Guardian = {
+                            name: getColumnValue(row, 'guardianName'),
+                            cpf: getColumnValue(row, 'guardianCpf'),
+                            phone: getColumnValue(row, 'guardianPhone'),
+                            email: getColumnValue(row, 'guardianEmail'),
+                            rg: '', // Not typically in CSV
+                        };
+
+                        const address: StudentAddress = {
+                            street: getColumnValue(row, 'addressStreet'),
+                            number: getColumnValue(row, 'addressNumber'),
+                            complement: getColumnValue(row, 'addressComplement'),
+                            neighborhood: getColumnValue(row, 'addressNeighborhood'),
+                            city: getColumnValue(row, 'addressCity'),
+                            state: getColumnValue(row, 'addressState'),
+                            zip: getColumnValue(row, 'addressZip'),
+                        };
+
+                        const dateOfBirth = getColumnValue(row, 'dateOfBirth');
+                        let isoDateOfBirth: string | undefined = undefined;
+                        if (dateOfBirth) {
+                            const dateParts = dateOfBirth.split(/[\/-]/);
+                            if (dateParts.length === 3) {
+                                // Try to handle DD/MM/YYYY and YYYY-MM-DD
+                                const day = dateParts[0].length === 4 ? dateParts[2] : dateParts[0];
+                                const month = dateParts[1];
+                                const year = dateParts[0].length === 4 ? dateParts[0] : dateParts[2];
+                                const date = new Date(`${year}-${month}-${day}T00:00:00`);
+                                if (!isNaN(date.getTime())) {
+                                    isoDateOfBirth = date.toISOString().split('T')[0];
+                                }
+                            }
+                        }
+
+                        return {
+                            id: Date.now() + index,
+                            name: studentName,
+                            avatar: generateAvatar(studentName),
+                            grade: foundClass ? foundClass.grade : classNameFromCsv || 'Não informada',
+                            className: foundClass ? foundClass.name : 'A alocar',
+                            classId: foundClass ? foundClass.id : -1,
+                            unit: foundClass ? foundClass.unit : studentUnit,
+                            status: StudentLifecycleStatus.ACTIVE,
+                            financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK',
+                            dateOfBirth: isoDateOfBirth,
+                            motherName: guardian.name,
+                            guardians: [guardian],
+                            address: address,
+                            originClassName: classNameFromCsv,
+                            originClassTurma: turmaFromCsv,
+                        };
+                    });
+
+                    const newContacts: Contact[] = jsonFromSheet.map((row: any) => ({
+                        name: getColumnValue(row, 'guardianName'),
+                        email: getColumnValue(row, 'guardianEmail'),
+                        phone: getColumnValue(row, 'guardianPhone'),
+                    })).filter(c => c.name);
+
+                    if (newContacts.length > 0) {
+                        addContacts(newContacts);
+                    }
+
+                    enrollStudentsFromImport(newStudents);
+
+                    const studentCount = newStudents.length;
+                    const studentText = studentCount === 1 ? 'aluno foi importado' : 'alunos foram importados';
+                    const pronoun = studentCount === 1 ? 'Ele está disponível' : 'Eles estão disponíveis';
+                    const contactText = studentCount === 1 ? 'Seu contato foi adicionado' : 'Seus contatos foram adicionados';
+
+                    alert(`${studentCount} ${studentText} com sucesso! ${pronoun} na tela de "Movimentação" para alocação. ${contactText} à agenda em Comunicação.`);
+                    setActiveSubView(EnrollmentSubView.TRANSFERS);
+
+                } catch (parseError) {
+                    console.error("Erro ao analisar CSV:", parseError);
+                    alert(`Erro ao processar o arquivo CSV:\n${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                } finally {
+                    setIsImporting(false);
+                    setImportStatus('');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
                 }
-
-                return {
-                    id: Date.now() + index,
-                    name: item.studentName,
-                    avatar: generateAvatar(item.studentName),
-                    grade: foundClass ? foundClass.grade : item.className || 'Não informada',
-                    className: foundClass ? foundClass.name : 'A alocar',
-                    classId: foundClass ? foundClass.id : -1,
-                    unit: foundClass ? foundClass.unit : studentUnit, // Use class unit if found, otherwise use student's detected unit
-                    status: StudentLifecycleStatus.ACTIVE,
-                    financialStatus: 'OK',
-                    libraryStatus: 'OK',
-                    academicDocsStatus: 'OK',
-                    dateOfBirth: isoDateOfBirth,
-                    motherName: item.guardianName || '',
-                    guardians: [guardian],
-                    address: address,
-                    originClassName: item.className,
-                    originClassTurma: item.studentTurma,
-                };
-            });
-            
-            const newContacts: Contact[] = extractedData.map((item: ExtractedStudent) => ({
-                name: item.guardianName || '',
-                email: item.guardianEmail || '',
-                phone: item.guardianPhone || '',
-            })).filter(c => c.name);
-
-            if (newContacts.length > 0) {
-                addContacts(newContacts);
-            }
-
-            enrollStudentsFromImport(newStudents);
-            
-            const studentCount = newStudents.length;
-            const studentText = studentCount === 1 ? 'aluno foi importado' : 'alunos foram importados';
-            const pronoun = studentCount === 1 ? 'Ele está disponível' : 'Eles estão disponíveis';
-            const contactText = studentCount === 1 ? 'Seu contato (e-mail e telefone) foi adicionado' : 'Seus contatos (e-mail e telefone) foram adicionados';
-
-            alert(`${studentCount} ${studentText} com sucesso! ${pronoun} na tela de "Movimentação" para alocação de turma. ${contactText} à agenda em Comunicação.`);
-            setActiveSubView(EnrollmentSubView.TRANSFERS);
+            };
+            reader.onerror = (error) => {
+                console.error("Erro ao ler o arquivo:", error);
+                alert("Não foi possível ler o arquivo selecionado.");
+                setIsImporting(false);
+            };
+            reader.readAsBinaryString(file);
 
         } catch (error) {
-            console.error("Erro ao importar PDF:", error);
-            alert(`Erro ao importar PDF:\n${error instanceof Error ? error.message : String(error)}`);
-        } finally {
-            setIsPdfImporting(false);
-            setImportStatus('');
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
+            console.error("Erro na importação:", error);
+            alert(`Erro na importação:\n${error instanceof Error ? error.message : String(error)}`);
+            setIsImporting(false);
         }
     };
 
@@ -352,16 +402,16 @@ const Admissions: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-gray-800/30 p-4 rounded-lg border border-gray-200 dark:border-gray-700/50 mb-6 gap-4">
                  <h2 className="text-lg font-bold text-gray-900 dark:text-white flex-shrink-0">Ações Rápidas</h2>
                  <div className="flex flex-wrap items-center gap-2">
-                    <input type="file" ref={fileInputRef} onChange={handlePdfFileChange} accept=".pdf" className="hidden" />
-                    <button onClick={handlePdfImportClick} disabled={isPdfImporting || isExporting} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-400 w-48 text-center">
-                        {isPdfImporting ? (
+                    <input type="file" ref={fileInputRef} onChange={handleCsvFileChange} accept=".csv" className="hidden" />
+                    <button onClick={handleImportClick} disabled={isImporting || isExporting} className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 disabled:bg-gray-400 w-48 text-center">
+                        {isImporting ? (
                             <div className="flex items-center justify-center">
                                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                 <span>{importStatus || 'Importando...'}</span>
                             </div>
-                        ) : 'Importar Alunos (PDF)'}
+                        ) : 'Importar Alunos (CSV)'}
                     </button>
-                    <button onClick={handleExportSpreadsheet} disabled={isPdfImporting || isExporting} className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-500 disabled:bg-gray-400">
+                    <button onClick={handleExportSpreadsheet} disabled={isImporting || isExporting} className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-500 disabled:bg-gray-400">
                         {isExporting ? 'Exportando...' : 'Exportar Planilha'}
                     </button>
                     <button onClick={() => setIsPublicLinkModalOpen(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-500">

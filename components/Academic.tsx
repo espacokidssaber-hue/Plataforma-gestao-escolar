@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AcademicSubView } from '../types';
+import { AcademicSubView, View } from '../types';
 import TeacherDashboard from './academic/TeacherDashboard';
 import GradesAndAttendance from './academic/GradesAndAttendance';
 import ReportCard from './academic/ReportCard';
@@ -28,7 +28,11 @@ const SubNavButton: React.FC<{
     </button>
 );
 
-const Academic: React.FC = () => {
+interface AcademicProps {
+    setActiveView: (view: View) => void;
+}
+
+const Academic: React.FC<AcademicProps> = ({ setActiveView }) => {
     const { user } = useAuth();
     const [activeSubView, setActiveSubView] = useState<AcademicSubView>(AcademicSubView.TEACHER_DASHBOARD);
     const [selectedClass, setSelectedClass] = useState<{ id: number; name: string } | null>(null);
@@ -52,7 +56,7 @@ const Academic: React.FC = () => {
     const renderSubView = () => {
         switch (activeSubView) {
             case AcademicSubView.TEACHER_DASHBOARD:
-                return <TeacherDashboard onSelectClass={handleSelectClass} />;
+                return <TeacherDashboard onSelectClass={handleSelectClass} setActiveView={setActiveView} />;
             case AcademicSubView.GRADES_ATTENDANCE:
                 return <GradesAndAttendance selectedClass={selectedClass} />;
             case AcademicSubView.REPORT_CARD:

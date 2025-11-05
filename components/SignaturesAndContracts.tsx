@@ -9,7 +9,7 @@ const Widget: React.FC<{ title: string; children: React.ReactNode }> = ({ title,
     </div>
 );
 
-const NoCameraIcon: React.FC<{ className?: string }> = ({ className }) => (
+const ImagePermissionDeniedIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.022-7 9.542-7 .847 0 1.669.105 2.458.303M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M2 2l20 20" />
@@ -46,7 +46,7 @@ const SignaturesAndContracts: React.FC = () => {
             <div className="bg-yellow-50 dark:bg-yellow-900/40 p-6 rounded-xl border-2 border-yellow-400 dark:border-yellow-700 shadow-lg">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="flex-shrink-0 bg-yellow-200 dark:bg-yellow-800/50 p-3 rounded-full">
-                         <NoCameraIcon className="h-8 w-8 text-yellow-600 dark:text-yellow-300" />
+                         <ImagePermissionDeniedIcon className="h-8 w-8 text-yellow-600 dark:text-yellow-300" />
                     </div>
                     <div>
                         <h3 className="text-xl font-bold text-yellow-900 dark:text-yellow-200">

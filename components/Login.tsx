@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// FIX: Changed import path for useSchoolInfo from App.tsx to EnrollmentContext.tsx as it is exported from there.
 import { useSchoolInfo } from '../contexts/EnrollmentContext';
 
 const Login: React.FC = () => {

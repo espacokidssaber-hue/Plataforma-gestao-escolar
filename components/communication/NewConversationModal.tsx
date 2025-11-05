@@ -15,8 +15,8 @@ const NewConversationModal: React.FC<NewConversationModalProps> = ({ onClose, on
             case 'admin':
                 return users.filter(u => u.id !== currentUser.id); // Admin can message anyone
             case 'secretary':
-                 // Secretary can message admin and educators
-                return users.filter(u => u.id !== currentUser.id && (u.role === 'admin' || u.role === 'educator'));
+                 // Secretary can message admin, educators, and other secretaries
+                return users.filter(u => u.id !== currentUser.id && (u.role === 'admin' || u.role === 'educator' || u.role === 'secretary'));
             case 'educator':
                  // Educator can message admin and secretary
                 return users.filter(u => u.id !== currentUser.id && (u.role === 'admin' || u.role === 'secretary'));

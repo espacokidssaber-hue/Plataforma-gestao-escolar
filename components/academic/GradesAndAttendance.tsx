@@ -6,12 +6,12 @@ import AnnualStudentGradesModal from './AnnualStudentGradesModal';
 import AttendanceReportModal from './AttendanceReportModal';
 import PrintableMonthlyAttendance from './PrintableMonthlyAttendance';
 import { MOCK_CALENDAR_EVENTS } from '../../data/calendarData';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
-import { useSchoolInfo } from '../../contexts/EnrollmentContext';
+import { useEnrollment, useSchoolInfo } from '../../contexts/EnrollmentContext';
 import { extractGradesFromPdf, ExtractedGrade } from '../../services/geminiService';
 import ImportGradesModal from './ImportGradesModal';
 import ImportGradesResultModal from './ImportGradesResultModal';
 import StudentObservationModal from './StudentObservationModal';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 interface GradesAndAttendanceProps {
@@ -60,8 +60,30 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
         updateStudentAcademicRecord 
     } = useEnrollment();
     const { schoolInfo } = useSchoolInfo();
+    const { user } = useAuth(); // Educator role check
+
     const [activeTab, setActiveTab] = useState<'attendance' | 'grades'>('grades');
-    const [selectedClass, setSelectedClass] = useState(initialSelectedClass);
+    
+    // Filter classes to only show those assigned to the educator
+    const teacherClasses = useMemo(() => {
+        if (user?.role === 'educator') {
+            return classes.filter(c => 
+                (c.teachers.matriz === user.id && c.unit === 'Matriz') || 
+                (c.teachers.filial === user.id && c.unit === 'Filial') ||
+                (c.teachers.anexo === user.id && c.unit === 'Anexo')
+            );
+        }
+        return classes;
+    }, [classes, user]);
+
+    // Set selected class state, ensuring it's a valid class for the educator
+    const [selectedClass, setSelectedClass] = useState(() => {
+        if (initialSelectedClass && teacherClasses.some(c => c.id === initialSelectedClass.id)) {
+            return initialSelectedClass;
+        }
+        return teacherClasses.length > 0 ? teacherClasses[0] : null;
+    });
+
     const [selectedSubjectId, setSelectedSubjectId] = useState(subjects[0]?.id || 0);
     const [studentForReport, setStudentForReport] = useState<StudentAcademicRecord | null>(null);
     const [isDiaryModalOpen, setIsDiaryModalOpen] = useState(false);
@@ -82,12 +104,17 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
     const [isObservationModalOpen, setIsObservationModalOpen] = useState(false);
     const [studentForObservation, setStudentForObservation] = useState<StudentAcademicRecord | null>(null);
 
-
+    // Effect to handle navigation from Teacher Dashboard or changes in available classes
     useEffect(() => {
-        if (initialSelectedClass) {
+        if (initialSelectedClass && teacherClasses.some(c => c.id === initialSelectedClass.id)) {
             setSelectedClass(initialSelectedClass);
+        } else if (teacherClasses.length > 0 && !teacherClasses.some(c => c.id === selectedClass?.id)) {
+            // If the current selected class is no longer valid, switch to the first available one
+            setSelectedClass(teacherClasses[0]);
+        } else if (teacherClasses.length === 0) {
+            setSelectedClass(null);
         }
-    }, [initialSelectedClass]);
+    }, [initialSelectedClass, teacherClasses, selectedClass]);
 
     const studentsData = useMemo(() => {
         if (!selectedClass) return [];
@@ -234,11 +261,11 @@ const GradesAndAttendance: React.FC<GradesAndAttendanceProps> = ({ selectedClass
                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Lançamento de Notas e Frequência</h2>
                  <select 
                     value={selectedClass?.id || ''} 
-                    onChange={e => setSelectedClass(classes.find(c => c.id === Number(e.target.value)) || null)}
+                    onChange={e => setSelectedClass(teacherClasses.find(c => c.id === Number(e.target.value)) || null)}
                     className="bg-gray-100 dark:bg-gray-700/50 p-2 rounded-lg text-gray-900 dark:text-white"
                  >
                     <option value="">Selecione uma turma</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {teacherClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
             </div>
              <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700">

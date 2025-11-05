@@ -1,384 +1,298 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import {
-    SchoolInfo, EnrolledStudent, SchoolClass, Lead, Applicant, ManualEnrollmentData,
-    NewExtemporaneousData, Contact, ClassLogEntry, Subject, UploadedActivity,
-    SignedContract, LeadStatus, NewEnrollmentStatus, StudentLifecycleStatus,
-    DocumentStatus, SchoolUnit, AllSchedules, Educator, StudentAcademicRecord
-} from '../types';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useMemo } from 'react';
+// FIX: Import SchoolUnit to resolve reference errors
+import { EnrolledStudent, Lead, SchoolClass, Applicant, ReEnrollingStudent, StudentLifecycleStatus, NewEnrollmentStatus, LeadStatus, SchoolInfo, Contact, ManualEnrollmentData, NewExtemporaneousData, ClassLogEntry, Educator, AllSchedules, Subject, DeclarationTemplate, SchoolUnit } from '../types';
+import { MOCK_ENROLLED_STUDENTS } from '../data/enrolledStudentsData';
+// import { MOCK_LEADS } from '../data/leadsData'; // Removed - File not provided
+import { MOCK_CLASSES } from '../data/classesData';
+// import { MOCK_APPLICANTS } from '../data/applicantsData'; // Removed - File not provided
+// import { MOCK_REENROLLING_STUDENTS } from '../data/reEnrollingStudentsData'; // Removed - File not provided
+// import { MOCK_SCHOOL_INFO } from '../data/schoolInfo'; // Removed - File not provided
+// import { MOCK_CRM_OPTIONS } from '../data/crmOptions'; // Removed - File not provided
+import { MOCK_STUDENTS_ACADEMIC } from '../data/academicRecordsData';
+import { MOCK_CLASS_LOGS } from '../data/classLogsData';
+import { MOCK_EDUCATORS } from '../data/educatorsData';
+import { MOCK_SCHEDULES_INITIAL_STATE } from '../data/schedulesData';
+import { MOCK_SUBJECTS } from '../data/subjectsData';
+import { DECLARATION_TEMPLATES_DATA } from '../data/declarationTemplatesData';
+import { useAuth } from './AuthContext';
 
-// ==================================================================================
-// DATA VERSIONING AND MIGRATION
-// ==================================================================================
-
-const CURRENT_DATA_VERSION = "1.2.0"; // New version for duplicate prevention logic
-
-interface AppData {
-    schoolInfo: SchoolInfo;
-    matrizInfo: SchoolInfo | null;
-    enrolledStudents: EnrolledStudent[];
-    classes: SchoolClass[];
-    leads: Lead[];
-    applicants: Applicant[];
-    contacts: Contact[];
-    classLogs: ClassLogEntry[];
-    subjects: Subject[];
-    schedules: AllSchedules;
-    educators: Educator[];
-    uploadedActivities: Record<number, UploadedActivity[]>;
-    signedContracts: SignedContract[];
-    crmOptions: { discountPrograms: string[] };
-    declarationTemplates: any[]; // Assuming type, can be defined
-    academicRecords: StudentAcademicRecord[];
-}
-
-// Function to get a unique identifier for a student
-const getStudentIdentifier = (student: { name: string, dateOfBirth?: string }): string => {
-    const normalizedName = (student.name || '').trim().toLowerCase();
-    const dob = student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : '';
-    return `${normalizedName}|${dob}`;
-};
-
-
-const migrateData = (data: any): AppData => {
-    // This is where you would handle migrations from older versions
-    console.log(`Data version is ${data.version}. Current version is ${CURRENT_DATA_VERSION}. No migration needed.`);
-    return data.data;
-};
-
-const getInitialData = (): AppData => {
-    const storedDataJSON = localStorage.getItem('enrollment_data');
-    let data: AppData | null = null;
-
-    if (storedDataJSON) {
-        try {
-            const storedData = JSON.parse(storedDataJSON);
-            if (storedData.version === CURRENT_DATA_VERSION) {
-                data = storedData.data;
-            } else {
-                console.warn(`Data version mismatch. Found ${storedData.version}, expected ${CURRENT_DATA_VERSION}.`);
-                data = migrateData(storedData);
-            }
-        } catch (e) {
-            console.error("Failed to parse enrollment_data from localStorage, resetting to default.", e);
-        }
-    }
-
-    // Default initial state for a fresh install (NO MOCK DATA)
-    if (!data) {
-        data = {
-            schoolInfo: { 
-                name: 'Escola Modelo', 
-                cnpj: '00.000.000/0001-00', 
-                address: 'Rua Exemplo, 123', 
-                phone: '(00) 0000-0000', 
-                email: 'contato@escola.com', 
-                directorName: 'Diretor(a) Exemplo', 
-                secretaryName: 'Secretário(a) Exemplo',
-                logo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAjTSURBVHhe7d1RjyRVGAbgLzgg4ICAGzhyyCHgBjgg4ICAG3DggIAzL3B5h7vc4Q4/wIEBDgg44Ddw3wAn4IAyKCPj/zT1jGZ1V1d1lU53d8+HSlZVVVXV3Un5VXXsT3+pAQDAq4h6fwAAgH6CAAAAJgoACACYKAAgAmCiAIAIAokCAAIgogCAiQIAAgAmCgAICJgoACACYKIAgAiCiQIAAiCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIAJAgCiAIA",
-            },
-            matrizInfo: null,
-            enrolledStudents: [],
-            classes: [],
-            leads: [],
-            applicants: [],
-            contacts: [],
-            classLogs: [],
-            subjects: [],
-            schedules: {},
-            educators: [],
-            uploadedActivities: {},
-            signedContracts: [],
-            crmOptions: { discountPrograms: ['Nenhum'] },
-            declarationTemplates: [
-                { id: 1, name: 'Declaração de Matrícula' },
-                { id: 2, name: 'Declaração de Conclusão' },
-            ],
-            academicRecords: [],
-        };
-    }
-
-    // Sync academic records with enrolled students
-    const studentIdsWithRecords = new Set(data.academicRecords.map(r => r.studentId));
-    data.enrolledStudents.forEach(s => {
-        if (!studentIdsWithRecords.has(s.id)) {
-            data!.academicRecords.push({
-                studentId: s.id,
-                studentName: s.name,
-                avatar: s.avatar,
-                grades: {},
-                attendance: {},
-                observations: [],
-            });
-        }
-    });
-
-    return data;
-};
-
-
-// --- AVATAR UTILS START ---
+// FIX: Moved helper functions before their usage to resolve "used before declaration" error.
+// Helper to generate avatars
 const getInitials = (name: string): string => { if (!name) return '?'; const words = name.trim().split(' ').filter(Boolean); if (words.length > 1) { return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase(); } if (words.length === 1 && words[0].length > 1) { return words[0].substring(0, 2).toUpperCase(); } if (words.length === 1) { return words[0][0].toUpperCase(); } return '?'; };
 const stringToColor = (str: string): string => { let hash = 0; if (!str) return '#cccccc'; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); hash = hash & hash; } let color = '#'; for (let i = 0; i < 3; i++) { const value = (hash >> (i * 8)) & 0xFF; const adjustedValue = 100 + (value % 156); color += ('00' + adjustedValue.toString(16)).substr(-2); } return color; };
 const generateAvatar = (name: string): string => { const initials = getInitials(name); const color = stringToColor(name); const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150" fill="${color}"><rect width="100%" height="100%" fill="currentColor" /><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="60" fill="#ffffff">${initials}</text></svg>`; return `data:image/svg+xml;base64,${btoa(svg)}`; };
-// --- AVATAR UTILS END ---
 
+// --- Default Mock Data for missing files ---
+const MOCK_LEADS: Lead[] = [];
+const MOCK_APPLICANTS: Applicant[] = [];
+const MOCK_REENROLLING_STUDENTS: ReEnrollingStudent[] = [];
+const MOCK_SCHOOL_INFO: SchoolInfo = {
+    name: 'Escola Modelo Aprender Mais',
+    cnpj: '12.345.678/0001-99',
+    address: 'Rua do Saber, 123, Bairro Educação, Cidade Exemplo, SP, CEP: 12345-678',
+    phone: '(11) 4004-1234',
+    email: 'contato@escolamodelo.com',
+    directorName: 'Dr. João da Silva',
+    secretaryName: 'Maria Antônia de Souza',
+    logo: '', // Can be updated in settings
+};
+const MOCK_CRM_OPTIONS = {
+    discountPrograms: ['Nenhum', 'Bolsa Padrão (25%)', 'Convênio Empresa (15%)', 'Irmãos (10%)', 'Indicação (5%)']
+};
+// --- End Default Mock Data ---
 
 interface EnrollmentContextType {
-    schoolInfo: SchoolInfo;
-    matrizInfo: SchoolInfo | null;
-    updateSchoolInfo: (newInfo: Partial<SchoolInfo>) => void;
     enrolledStudents: EnrolledStudent[];
-    updateEnrolledStudent: (student: EnrolledStudent) => void;
-    enrollStudentsFromImport: (students: EnrolledStudent[]) => void;
-    classes: SchoolClass[];
-    addSchoolClass: (schoolClass: Omit<SchoolClass, 'id'|'students'>) => void;
-    updateSchoolClass: (schoolClass: SchoolClass) => void;
     leads: Lead[];
-    addLead: (lead: Lead) => void;
-    updateLead: (lead: Lead) => void;
-    convertLeadToApplicant: (leadId: number) => void;
+    classes: SchoolClass[];
     applicants: Applicant[];
-    addManualApplicant: (data: ManualEnrollmentData) => void;
-    submitPublicEnrollment: (data: any) => void;
-    updateApplicant: (applicant: Applicant) => void;
-    finalizeEnrollment: (applicant: Applicant) => void;
-    highlightedApplicantId: number | null;
-    setHighlightedApplicantId: (id: number | null) => void;
-    addExtemporaneousApplicant: (data: NewExtemporaneousData) => void;
-    contacts: Contact[];
-    addContacts: (newContacts: Contact[]) => void;
+    reEnrollingStudents: ReEnrollingStudent[];
+    academicRecords: any[]; 
     classLogs: ClassLogEntry[];
-    addClassLog: (log: Omit<ClassLogEntry, 'id' | 'lastEditedBy'>) => void;
+    educators: Educator[];
+    schedules: AllSchedules;
+    subjects: Subject[];
+    contacts: Contact[];
+    uploadedActivities: Record<number, any[]>;
+    signedContracts: any[];
+    
+    enrollStudentsFromImport: (newStudents: EnrolledStudent[]) => void;
+    updateEnrolledStudent: (updatedStudent: EnrolledStudent) => void;
+    
+    addLead: (newLead: Lead) => void;
+    updateLead: (updatedLead: Lead) => void;
+    convertLeadToApplicant: (leadId: number) => void;
+    
+    addSchoolClass: (newClass: Omit<SchoolClass, 'id' | 'students'>) => void;
+    updateSchoolClass: (updatedClass: SchoolClass) => void;
+    
+    updateApplicant: (updatedApplicant: Applicant) => void;
+    addManualApplicant: (data: ManualEnrollmentData) => void;
+    addExtemporaneousApplicant: (data: NewExtemporaneousData) => void;
+    submitPublicEnrollment: (data: any) => void;
+    finalizeEnrollment: (applicant: Applicant) => void;
+    
+    updateStudentAcademicRecord: (record: any) => void;
+    
+    addClassLog: (log: Omit<ClassLogEntry, 'id'>) => void;
     updateClassLog: (log: ClassLogEntry, editorName?: string) => void;
     deleteClassLog: (logId: number) => void;
-    subjects: Subject[];
-    addSubject: (subjectName: string) => Subject;
-    schedules: AllSchedules;
-    updateSchedules: (schedules: AllSchedules) => void;
-    educators: Educator[];
+
     addEducator: (educator: Omit<Educator, 'id'>) => void;
     updateEducator: (educator: Educator) => void;
-    uploadedActivities: Record<number, UploadedActivity[]>;
-    addUploadedActivity: (activity: Omit<UploadedActivity, 'id' | 'classId' | 'uploadDate'>, classId: number) => void;
-    signedContracts: SignedContract[];
+    
+    updateSchedules: (newSchedules: AllSchedules) => void;
+    addSubject: (subjectName: string) => Subject;
+
+    addContacts: (newContacts: Contact[]) => void;
+    addUploadedActivity: (activity: any, classId: number) => void;
     uploadSignedContract: (studentId: number, file: File, fileUrl: string) => void;
+    
+    highlightedApplicantId: number | null;
+    setHighlightedApplicantId: (id: number | null) => void;
+
+    // School Info
+    schoolInfo: SchoolInfo;
+    updateSchoolInfo: (info: SchoolInfo) => void;
+    
+    // CRM Options
     crmOptions: { discountPrograms: string[] };
     updateCrmOptions: (options: { discountPrograms: string[] }) => void;
-    academicRecords: StudentAcademicRecord[];
-    updateStudentAcademicRecord: (record: StudentAcademicRecord) => void;
+
+    // Declaration Templates
+    declarationTemplates: DeclarationTemplate[];
+    updateDeclarationTemplates: (templates: DeclarationTemplate[]) => void;
 }
 
 const EnrollmentContext = createContext<EnrollmentContextType | undefined>(undefined);
 
+// A single hook for school info
+export const useSchoolInfo = () => {
+    const context = useContext(EnrollmentContext);
+    if (!context) throw new Error("useSchoolInfo must be used within an EnrollmentProvider");
+    return { schoolInfo: context.schoolInfo, updateSchoolInfo: context.updateSchoolInfo };
+}
+
 export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [appData, setAppData] = useState<AppData>(getInitialData);
+    const { user } = useAuth();
 
-    // // Save consolidated state to localStorage on any change - DISABLED FOR DEMO MODE
-    // useEffect(() => {
-    //     const versionedData = {
-    //         version: CURRENT_DATA_VERSION,
-    //         data: appData
-    //     };
-    //     localStorage.setItem('enrollment_data', JSON.stringify(versionedData));
-    // }, [appData]);
-    
+    const [enrolledStudents, setEnrolledStudents] = useState<EnrolledStudent[]>([]);
+    const [leads, setLeads] = useState<Lead[]>([]);
+    const [classes, setClasses] = useState<SchoolClass[]>([]);
+    const [applicants, setApplicants] = useState<Applicant[]>([]);
+    const [reEnrollingStudents, setReEnrollingStudents] = useState<ReEnrollingStudent[]>([]);
     const [highlightedApplicantId, setHighlightedApplicantId] = useState<number | null>(null);
+    const [schoolInfo, setSchoolInfo] = useState<SchoolInfo>(MOCK_SCHOOL_INFO);
+    const [crmOptions, setCrmOptions] = useState(MOCK_CRM_OPTIONS);
+    const [academicRecords, setAcademicRecords] = useState(Object.values(MOCK_STUDENTS_ACADEMIC).flat());
+    const [classLogs, setClassLogs] = useState<ClassLogEntry[]>([]);
+    const [educators, setEducators] = useState<Educator[]>([]);
+    const [schedules, setSchedules] = useState<AllSchedules>({});
+    const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [contacts, setContacts] = useState<Contact[]>([]);
+    const [uploadedActivities, setUploadedActivities] = useState<Record<number, any[]>>({});
+    const [signedContracts, setSignedContracts] = useState<any[]>([]);
 
-    // --- State Update Functions ---
-    const updateSchoolInfo = (newInfo: Partial<SchoolInfo>) => {
-        setAppData(prev => ({
-            ...prev,
-            schoolInfo: { ...prev.schoolInfo, ...newInfo }
-        }));
+    const [declarationTemplates, setDeclarationTemplates] = useState<DeclarationTemplate[]>(() => {
+        try {
+            const saved = localStorage.getItem('declaration_templates');
+            return saved ? JSON.parse(saved) : DECLARATION_TEMPLATES_DATA;
+        } catch {
+            return DECLARATION_TEMPLATES_DATA;
+        }
+    });
+
+    const updateDeclarationTemplates = (templates: DeclarationTemplate[]) => {
+        setDeclarationTemplates(templates);
+        localStorage.setItem('declaration_templates', JSON.stringify(templates));
     };
-    
-    const updateEnrolledStudent = (student: EnrolledStudent) => setAppData(prev => ({ ...prev, enrolledStudents: prev.enrolledStudents.map(s => s.id === student.id ? student : s) }));
-    
-    const enrollStudentsFromImport = (newStudents: EnrolledStudent[]) => {
-        const existingIdentifiers = new Set(appData.enrolledStudents.map(getStudentIdentifier));
-        const uniqueNewStudents = newStudents.filter(s => !existingIdentifiers.has(getStudentIdentifier(s)));
-        const skippedCount = newStudents.length - uniqueNewStudents.length;
 
-        setAppData(prev => ({
-            ...prev,
-            enrolledStudents: [...prev.enrolledStudents, ...uniqueNewStudents]
-        }));
-        
-        if(skippedCount > 0) {
-            alert(`${skippedCount} aluno(s) foram ignorados por já estarem cadastrados (mesmo nome e data de nascimento).`);
+    // Generic function to load from localStorage
+    const loadState = <T,>(key: string, mockData: T): T => {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : mockData;
+        } catch (error) {
+            console.warn(`Error reading localStorage key “${key}”:`, error);
+            return mockData;
         }
     };
-    
-    const addSchoolClass = (data: Omit<SchoolClass, 'id'|'students'>) => setAppData(prev => ({ ...prev, classes: [...prev.classes, { ...data, id: Date.now(), students: [] }] }));
-    const updateSchoolClass = (schoolClass: SchoolClass) => setAppData(prev => ({ ...prev, classes: prev.classes.map(c => c.id === schoolClass.id ? schoolClass : c) }));
 
-    const addLead = (lead: Lead) => setAppData(prev => ({ ...prev, leads: [lead, ...prev.leads] }));
-    const updateLead = (lead: Lead) => setAppData(prev => ({ ...prev, leads: prev.leads.map(l => l.id === lead.id ? lead : l) }));
+    // UseEffect to load all data from localStorage on initial render
+    useEffect(() => {
+        const data = loadState('enrollment_data', {
+            enrolledStudents: MOCK_ENROLLED_STUDENTS,
+            leads: MOCK_LEADS,
+            classes: MOCK_CLASSES,
+            applicants: MOCK_APPLICANTS,
+            reEnrollingStudents: MOCK_REENROLLING_STUDENTS,
+            academicRecords: Object.values(MOCK_STUDENTS_ACADEMIC).flat(),
+            classLogs: MOCK_CLASS_LOGS,
+            educators: MOCK_EDUCATORS,
+            schedules: MOCK_SCHEDULES_INITIAL_STATE,
+            subjects: MOCK_SUBJECTS,
+            contacts: [],
+            uploadedActivities: {},
+            signedContracts: [],
+        });
+        setEnrolledStudents(data.enrolledStudents);
+        setLeads(data.leads);
+        setClasses(data.classes);
+        setApplicants(data.applicants);
+        setReEnrollingStudents(data.reEnrollingStudents);
+        setAcademicRecords(data.academicRecords);
+        setClassLogs(data.classLogs);
+        setEducators(data.educators);
+        setSchedules(data.schedules);
+        setSubjects(data.subjects);
+        setContacts(data.contacts);
+        setUploadedActivities(data.uploadedActivities);
+        setSignedContracts(data.signedContracts);
+
+        setSchoolInfo(loadState('schoolInfo', MOCK_SCHOOL_INFO));
+        setCrmOptions(loadState('crmOptions', MOCK_CRM_OPTIONS));
+    }, []);
+
+    // Filtered data based on user role and unit
+    const filteredClasses = useMemo(() => {
+        if (user?.role === 'secretary' && user.unit) {
+            return classes.filter(c => c.unit === user.unit);
+        }
+        return classes;
+    }, [classes, user]);
+
+    const filteredEnrolledStudents = useMemo(() => {
+        if (user?.role === 'secretary' && user.unit) {
+            // Secretary sees students from their unit OR unallocated students
+            return enrolledStudents.filter(s => s.unit === user.unit || s.classId === -1);
+        }
+        return enrolledStudents;
+    }, [enrolledStudents, user]);
     
-    const convertLeadToApplicant = (leadId: number) => {
-        const lead = appData.leads.find(l => l.id === leadId);
-        if (lead) {
-            const newApplicant: Applicant = {
-                id: Date.now(), name: lead.name, avatar: lead.avatar, submissionDate: new Date().toISOString(),
-                status: NewEnrollmentStatus.PENDING_ANALYSIS, documents: [], guardians: [], healthInfo: { allergies: '', medications: '', emergencyContactName: '', emergencyContactPhone: '' },
-                dataValidated: false, guardianDataValidated: false, paymentConfirmed: false, discountProgram: lead.discountProgram
-            };
-            setAppData(prev => ({ ...prev, applicants: [newApplicant, ...prev.applicants], leads: prev.leads.filter(l => l.id !== leadId) }));
+    const filteredReEnrollingStudents = useMemo(() => {
+        if (user?.role === 'secretary' && user.unit) {
+            return reEnrollingStudents.filter(s => s.unit === user.unit);
+        }
+        return reEnrollingStudents;
+    }, [reEnrollingStudents, user]);
+    
+    const filteredAcademicRecords = useMemo(() => {
+        const studentIds = new Set(filteredEnrolledStudents.map(s => s.id));
+        return academicRecords.filter(ar => studentIds.has(ar.studentId));
+    }, [academicRecords, filteredEnrolledStudents]);
+
+
+    const value: EnrollmentContextType = {
+        enrolledStudents: filteredEnrolledStudents, 
+        leads, 
+        classes: filteredClasses, 
+        applicants, 
+        reEnrollingStudents: filteredReEnrollingStudents, 
+        highlightedApplicantId, setHighlightedApplicantId, schoolInfo, crmOptions, 
+        academicRecords: filteredAcademicRecords, 
+        classLogs, educators, schedules, subjects, contacts, uploadedActivities, signedContracts, declarationTemplates, updateDeclarationTemplates,
+        enrollStudentsFromImport: (newStudents) => setEnrolledStudents(prev => [...prev, ...newStudents]),
+        updateEnrolledStudent: (updated) => setEnrolledStudents(prev => prev.map(s => s.id === updated.id ? updated : s)),
+        addLead: (newLead) => setLeads(prev => [...prev, newLead]),
+        updateLead: (updated) => setLeads(prev => prev.map(l => l.id === updated.id ? updated : l)),
+        convertLeadToApplicant: (leadId) => {
+            const lead = leads.find(l => l.id === leadId);
+            if (!lead) return;
+            const newApplicant: Applicant = { id: Date.now(), name: lead.name, avatar: lead.avatar, status: NewEnrollmentStatus.PENDING_ANALYSIS, submissionDate: new Date().toISOString(), interest: lead.interest, guardians: [], documents: [], dataValidated: false, guardianDataValidated: false, paymentConfirmed: false };
+            setApplicants(prev => [newApplicant, ...prev]);
+            setLeads(prev => prev.filter(l => l.id !== leadId));
             setHighlightedApplicantId(newApplicant.id);
+        },
+        addSchoolClass: (newClass) => setClasses(prev => [...prev, { ...newClass, id: Date.now(), students: [] }]),
+        updateSchoolClass: (updated) => setClasses(prev => prev.map(c => c.id === updated.id ? updated : c)),
+        updateApplicant: (updated) => setApplicants(prev => prev.map(a => a.id === updated.id ? updated : a)),
+        addManualApplicant: (data) => {
+            const newApplicant: Applicant = { id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), status: NewEnrollmentStatus.READY_TO_FINALIZE, submissionDate: new Date().toISOString(), interest: data.grade, guardians: [data.guardian], address: data.studentAddress, dateOfBirth: data.studentDateOfBirth, documents: data.documents, dataValidated: true, guardianDataValidated: true, paymentConfirmed: data.paymentConfirmed, enrollmentFee: data.enrollmentFee, monthlyFee: data.monthlyFee, discountProgram: data.discountProgram };
+            setApplicants(prev => [newApplicant, ...prev]);
+        },
+        addExtemporaneousApplicant: (data) => {
+            const newStudent: EnrolledStudent = { id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), grade: data.grade, className: 'A alocar', classId: -1, unit: user?.unit || SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'Pendente', originClassName: data.grade, guardians: [{ name: data.guardianName, cpf: '', rg: '', phone: '', email: '' }] };
+            setEnrolledStudents(prev => [newStudent, ...prev]);
+        },
+        submitPublicEnrollment: (data) => {
+            const newApplicant: Applicant = { id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), status: NewEnrollmentStatus.PENDING_ANALYSIS, submissionDate: new Date().toISOString(), interest: 'Não informado', guardians: [data.guardian], documents: data.documents.map((d: any) => ({ ...d, status: 'Em Análise', deliveryMethod: 'Digital' })), dataValidated: false, guardianDataValidated: false, paymentConfirmed: false, dateOfBirth: data.dateOfBirth, healthInfo: data.healthInfo };
+            setApplicants(prev => [newApplicant, ...prev]);
+        },
+        finalizeEnrollment: (applicant) => {
+            const newStudent: EnrolledStudent = { id: applicant.id, name: applicant.name, avatar: applicant.avatar, grade: applicant.interest || 'Não informado', className: 'A alocar', classId: -1, unit: user?.unit || SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK', dateOfBirth: applicant.dateOfBirth, guardians: applicant.guardians, address: applicant.address, enrollmentFee: applicant.enrollmentFee, monthlyFee: applicant.monthlyFee, discountProgram: applicant.discountProgram };
+            setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: NewEnrollmentStatus.ENROLLED } : a));
+            setEnrolledStudents(prev => [...prev, newStudent]);
+        },
+        updateSchoolInfo: (info) => setSchoolInfo(info),
+        updateCrmOptions: (options) => setCrmOptions(prev => ({...prev, ...options})),
+        updateStudentAcademicRecord: (record) => setAcademicRecords(prev => prev.map(r => r.studentId === record.studentId ? record : r)),
+        addClassLog: (log) => setClassLogs(prev => [{...log, id: Date.now()}, ...prev]),
+        updateClassLog: (log, editorName) => setClassLogs(prev => prev.map(l => l.id === log.id ? {...log, lastEditedBy: editorName} : l)),
+        deleteClassLog: (logId) => setClassLogs(prev => prev.filter(l => l.id !== logId)),
+        addEducator: (educator) => setEducators(prev => [{...educator, id: Date.now()}, ...prev]),
+        updateEducator: (educator) => setEducators(prev => prev.map(e => e.id === educator.id ? educator : e)),
+        updateSchedules: (newSchedules) => setSchedules(newSchedules),
+        addSubject: (subjectName) => {
+            const newSubject: Subject = { id: Date.now(), name: subjectName, color: '#808080', calculationMethod: 'arithmetic', assessments: [] };
+            setSubjects(prev => [...prev, newSubject]);
+            return newSubject;
+        },
+        addContacts: (newContacts) => setContacts(prev => {
+            const existingPhones = new Set(prev.map(c => c.phone).filter(Boolean));
+            const uniqueNewContacts = newContacts.filter(c => !c.phone || !existingPhones.has(c.phone));
+            return [...prev, ...uniqueNewContacts];
+        }),
+        addUploadedActivity: (activity, classId) => {
+            const newActivity = { ...activity, id: Date.now(), uploadDate: new Date().toISOString() };
+            setUploadedActivities(prev => ({
+                ...prev,
+                [classId]: [...(prev[classId] || []), newActivity]
+            }));
+        },
+        uploadSignedContract: (studentId, file, fileUrl) => {
+            const newContract = { studentId, fileName: file.name, fileUrl, uploadDate: new Date().toISOString() };
+            setSignedContracts(prev => [...prev.filter(c => c.studentId !== studentId), newContract]);
         }
-    };
-    
-    const updateApplicant = (applicant: Applicant) => setAppData(prev => ({ ...prev, applicants: prev.applicants.map(a => a.id === applicant.id ? applicant : a) }));
-    
-    const addManualApplicant = (data: ManualEnrollmentData) => {
-        const newApplicant: Applicant = {
-            id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), submissionDate: new Date().toISOString(),
-            status: NewEnrollmentStatus.READY_TO_FINALIZE, documents: data.documents.map(d => ({ ...d })), guardians: [data.guardian],
-            healthInfo: data.healthInfo, dataValidated: true, guardianDataValidated: true, paymentConfirmed: data.paymentConfirmed,
-            paymentMethod: data.paymentMethod, discountProgram: data.discountProgram, dateOfBirth: data.studentDateOfBirth,
-            address: data.studentAddress, enrollmentFee: data.enrollmentFee, monthlyFee: data.monthlyFee,
-        };
-        setAppData(prev => ({ ...prev, applicants: [newApplicant, ...prev.applicants] }));
-    };
-    
-    const submitPublicEnrollment = (data: any) => {
-        const existingIdentifiers = new Set(appData.enrolledStudents.map(s => getStudentIdentifier(s)));
-        if (existingIdentifiers.has(getStudentIdentifier({ name: data.studentName, dateOfBirth: data.dateOfBirth }))) {
-            throw new Error('Já existe um aluno matriculado com este nome e data de nascimento.');
-        }
-
-        const newApplicant: Applicant = {
-            id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), submissionDate: new Date().toISOString(),
-            status: NewEnrollmentStatus.PENDING_ANALYSIS, documents: data.documents.map((d: any) => ({ name: d.name, fileUrl: d.fileUrl, status: DocumentStatus.ANALYSIS, deliveryMethod: 'Digital' })),
-            guardians: [data.guardian], healthInfo: data.healthInfo, dataValidated: false, guardianDataValidated: false, paymentConfirmed: false, dateOfBirth: data.dateOfBirth
-        };
-        setAppData(prev => ({ ...prev, applicants: [newApplicant, ...prev.applicants] }));
-    };
-
-    const finalizeEnrollment = (applicant: Applicant) => {
-        const existingIdentifiers = new Set(appData.enrolledStudents.map(s => getStudentIdentifier(s)));
-        if (existingIdentifiers.has(getStudentIdentifier({ name: applicant.name, dateOfBirth: applicant.dateOfBirth }))) {
-             throw new Error('Já existe um aluno matriculado com este nome e data de nascimento.');
-        }
-
-        const newStudent: EnrolledStudent = {
-            id: Date.now(), name: applicant.name, avatar: applicant.avatar, grade: 'A definir', className: 'A alocar', classId: -1,
-            unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'OK',
-            dateOfBirth: applicant.dateOfBirth, guardians: applicant.guardians, address: applicant.address,
-            enrollmentFee: applicant.enrollmentFee, monthlyFee: applicant.monthlyFee,
-        };
-        
-        setAppData(prev => ({
-            ...prev,
-            enrolledStudents: [newStudent, ...prev.enrolledStudents],
-            applicants: prev.applicants.map(a => a.id === applicant.id ? { ...a, status: NewEnrollmentStatus.ENROLLED } : a)
-        }));
-    };
-
-    const addExtemporaneousApplicant = (data: NewExtemporaneousData) => {
-        const existingIdentifier = getStudentIdentifier({name: data.studentName});
-        const existingStudent = appData.enrolledStudents.find(s => getStudentIdentifier(s) === existingIdentifier);
-        if (existingStudent) {
-            if (!window.confirm(`Já existe um aluno chamado ${data.studentName}. Deseja criar um novo cadastro mesmo assim?`)) {
-                return;
-            }
-        }
-        
-        const newStudent: EnrolledStudent = {
-            id: Date.now(), name: data.studentName, avatar: generateAvatar(data.studentName), grade: data.grade, className: 'A alocar', classId: -1,
-            unit: SchoolUnit.MATRIZ, status: StudentLifecycleStatus.ACTIVE, financialStatus: 'OK', libraryStatus: 'OK', academicDocsStatus: 'Pendente',
-            guardians: [{ name: data.guardianName, cpf: '', rg: '', phone: '', email: '' }],
-        };
-        setAppData(prev => ({ ...prev, enrolledStudents: [newStudent, ...prev.enrolledStudents] }));
-    };
-
-    const addContacts = (newContacts: Contact[]) => {
-        setAppData(prev => {
-            const existingPhones = new Set(prev.contacts.map(c => c.phone));
-            const uniqueNewContacts = newContacts.filter(c => c.phone && !existingPhones.has(c.phone));
-            return { ...prev, contacts: [...prev.contacts, ...uniqueNewContacts] };
-        });
-    };
-    
-    const addClassLog = (log: Omit<ClassLogEntry, 'id' | 'lastEditedBy'>) => setAppData(prev => ({ ...prev, classLogs: [{ ...log, id: Date.now() }, ...prev.classLogs]}));
-    
-    const updateClassLog = (log: ClassLogEntry, editorName?: string) => {
-        setAppData(prev => ({
-            ...prev,
-            classLogs: prev.classLogs.map(l => {
-                if (l.id === log.id) {
-                    const updatedLog = { ...log };
-                    if (editorName) {
-                        updatedLog.lastEditedBy = editorName;
-                    }
-                    return updatedLog;
-                }
-                return l;
-            })
-        }));
-    };
-
-    const deleteClassLog = (logId: number) => setAppData(prev => ({...prev, classLogs: prev.classLogs.filter(l => l.id !== logId)}));
-
-    const addSubject = (subjectName: string): Subject => {
-        const newSubject: Subject = {
-            id: Date.now(), name: subjectName, color: stringToColor(subjectName),
-            calculationMethod: 'arithmetic', assessments: [],
-        };
-        setAppData(prev => ({...prev, subjects: [...prev.subjects, newSubject]}));
-        return newSubject;
-    };
-    
-    const updateSchedules = (schedules: AllSchedules) => setAppData(prev => ({ ...prev, schedules }));
-
-    const addEducator = (data: Omit<Educator, 'id'>) => {
-        const newEducator: Educator = { ...data, id: Date.now() };
-        setAppData(prev => ({ ...prev, educators: [newEducator, ...prev.educators] }));
-    };
-
-    const updateEducator = (educator: Educator) => {
-        setAppData(prev => ({ ...prev, educators: prev.educators.map(e => (e.id === educator.id ? educator : e)) }));
-    };
-
-    const addUploadedActivity = (activity: Omit<UploadedActivity, 'id' | 'classId' | 'uploadDate'>, classId: number) => {
-        const newActivity: UploadedActivity = { ...activity, id: Date.now(), classId, uploadDate: new Date().toISOString() };
-        setAppData(prev => {
-            const newActivities = { ...prev.uploadedActivities };
-            if (!newActivities[classId]) newActivities[classId] = [];
-            newActivities[classId].push(newActivity);
-            return { ...prev, uploadedActivities: newActivities };
-        });
-    };
-
-    const uploadSignedContract = (studentId: number, file: File, fileUrl: string) => {
-        const newContract: SignedContract = { studentId, fileUrl, fileName: file.name, uploadDate: new Date().toISOString() };
-        setAppData(prev => ({ ...prev, signedContracts: [...prev.signedContracts.filter(c => c.studentId !== studentId), newContract]}));
-    };
-
-    const updateCrmOptions = (options: { discountPrograms: string[] }) => {
-        setAppData(prev => ({
-            ...prev,
-            crmOptions: options
-        }));
-    };
-    
-    const updateStudentAcademicRecord = (record: StudentAcademicRecord) => {
-        setAppData(prev => ({
-            ...prev,
-            academicRecords: prev.academicRecords.map(r => r.studentId === record.studentId ? record : r)
-        }));
-    };
-
-    const value = {
-        ...appData,
-        updateSchoolInfo,
-        updateEnrolledStudent, enrollStudentsFromImport, addSchoolClass, updateSchoolClass, addLead, updateLead,
-        convertLeadToApplicant, addManualApplicant, submitPublicEnrollment, updateApplicant, finalizeEnrollment,
-        highlightedApplicantId, setHighlightedApplicantId, addExtemporaneousApplicant, addContacts,
-        addClassLog, updateClassLog, deleteClassLog, addSubject, addUploadedActivity, uploadSignedContract,
-        updateSchedules, addEducator, updateEducator,
-        updateCrmOptions,
-        updateStudentAcademicRecord,
     };
 
     return (
@@ -394,12 +308,4 @@ export const useEnrollment = (): EnrollmentContextType => {
         throw new Error('useEnrollment must be used within an EnrollmentProvider');
     }
     return context;
-};
-
-export const useSchoolInfo = () => {
-    const context = useContext(EnrollmentContext);
-    if (!context) {
-        throw new Error('useSchoolInfo must be used within an EnrollmentProvider');
-    }
-    return { schoolInfo: context.schoolInfo, matrizInfo: context.matrizInfo };
 };

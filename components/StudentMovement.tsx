@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { EnrolledStudent, StudentLifecycleStatus, SchoolClass, NewExtemporaneousData, SchoolUnit } from '../types';
-import { useEnrollment } from '../contexts/EnrollmentContext';
+import { EnrolledStudent, StudentLifecycleStatus, SchoolClass, NewExtemporaneousData, SchoolUnit } from '../../types';
+import { useEnrollment } from '../../contexts/EnrollmentContext';
 import ExtemporaneousEnrollmentModal from './ExtemporaneousEnrollmentModal';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -143,28 +143,12 @@ const AllocationBar: React.FC<{
 
 const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, setHighlightedClassId }) => {
     const { enrolledStudents, updateEnrolledStudent, addExtemporaneousApplicant, classes } = useEnrollment();
-    const { user } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [isExtemporaneousModalOpen, setIsExtemporaneousModalOpen] = useState(false);
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<number>>(new Set());
     const [dragOverColumnId, setDragOverColumnId] = useState<number | 'unassigned' | null>(null);
     const columnRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-
-    const studentsForRole = useMemo(() => {
-        if (user?.role === 'secretary' && user.unit) {
-            // Show students from their unit OR unallocated students from any unit
-            return enrolledStudents.filter(s => s.unit === user.unit || s.classId === -1);
-        }
-        return enrolledStudents;
-    }, [enrolledStudents, user]);
     
-    const classesForRole = useMemo(() => {
-        if (user?.role === 'secretary' && user.unit) {
-            return classes.filter(c => c.unit === user.unit);
-        }
-        return classes;
-    }, [classes, user]);
-
      useEffect(() => {
         if (highlightedClassId) {
             const node = columnRefs.current.get(highlightedClassId);
@@ -181,10 +165,10 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
 
 
     const studentsToDisplay = useMemo(() => 
-        studentsForRole
+        enrolledStudents
             .filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()))
             .sort((a, b) => a.classId === -1 ? -1 : 1), // Prioriza alunos "A alocar"
-    [studentsForRole, searchTerm]);
+    [enrolledStudents, searchTerm]);
     
     const unallocatedStudents = useMemo(() => studentsToDisplay.filter(s => s.classId === -1), [studentsToDisplay]);
 
@@ -224,14 +208,14 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
         const missing = new Set<string>();
         unallocatedStudents.forEach(student => {
             if (student.originClassName) {
-                const foundClass = findClassForStudent(student.originClassName!, student.originClassTurma, student.unit, classesForRole);
+                const foundClass = findClassForStudent(student.originClassName!, student.originClassTurma, student.unit, classes);
                 if (!foundClass) {
                     missing.add(`${student.originClassName} ${student.originClassTurma}`.trim());
                 }
             }
         });
         return Array.from(missing);
-    }, [unallocatedStudents, classesForRole]);
+    }, [unallocatedStudents, classes]);
 
     const handleToggleSelection = (student: EnrolledStudent) => {
         if (student.classId !== -1 || !student.originClassName) {
@@ -281,11 +265,11 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
         if (sourceClassId === targetClassId) return;
 
         const studentsToMoveIds = selectedStudentIds.has(draggedStudentId) ? Array.from(selectedStudentIds) : [draggedStudentId];
-        const studentsToMove = studentsToMoveIds.map(id => studentsForRole.find(s => s.id === id)).filter((s): s is EnrolledStudent => !!s);
+        const studentsToMove = studentsToMoveIds.map(id => enrolledStudents.find(s => s.id === id)).filter((s): s is EnrolledStudent => !!s);
         
         if (targetClass) {
             const capacity = getCapacityForClass(targetClass);
-            const currentEnrollment = studentsForRole.filter(s => s.classId === targetClass.id).length;
+            const currentEnrollment = enrolledStudents.filter(s => s.classId === targetClass.id).length;
             if (currentEnrollment + studentsToMove.length > capacity) {
                 alert(`Ação bloqueada: A turma "${targetClass.name}" (${targetClass.unit}) não tem capacidade suficiente para ${studentsToMove.length} novo(s) aluno(s).\nVagas disponíveis: ${capacity - currentEnrollment}`);
                 return;
@@ -309,17 +293,17 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
     };
     
     const handleAllocate = (targetClassId: number) => {
-        const targetClass = classesForRole.find(c => c.id === targetClassId);
+        const targetClass = classes.find(c => c.id === targetClassId);
         if (!targetClass) return;
     
         const studentsToMove = Array.from(selectedStudentIds)
-            .map(id => studentsForRole.find(s => s.id === id))
+            .map(id => enrolledStudents.find(s => s.id === id))
             .filter((s): s is EnrolledStudent => !!s);
             
         if (studentsToMove.length === 0) return;
     
         const capacity = getCapacityForClass(targetClass);
-        const currentEnrollment = studentsForRole.filter(s => s.classId === targetClass.id).length;
+        const currentEnrollment = enrolledStudents.filter(s => s.classId === targetClass.id).length;
         
         if (currentEnrollment + studentsToMove.length > capacity) {
             alert(`Ação bloqueada: A turma "${targetClass.name}" (${targetClass.unit}) não tem capacidade suficiente para ${studentsToMove.length} novo(s) aluno(s).\nVagas disponíveis: ${capacity - currentEnrollment}`);
@@ -386,11 +370,11 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
                     ))}
                 </AllocationColumn>
                 
-                {classesForRole.map(c => (
+                {classes.map(c => (
                      <AllocationColumn
                         key={c.id}
                         title={c.name}
-                        students={studentsForRole.filter(s => s.classId === c.id)}
+                        students={enrolledStudents.filter(s => s.classId === c.id)}
                         classData={c}
                         onDrop={(e) => handleDrop(e, c)}
                         isOver={dragOverColumnId === c.id}
@@ -405,7 +389,7 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
                             }
                         }}
                      >
-                        {studentsForRole.filter(s => s.classId === c.id).map(student => (
+                        {enrolledStudents.filter(s => s.classId === c.id).map(student => (
                              <StudentCard
                                 key={student.id}
                                 student={student}
@@ -421,7 +405,7 @@ const StudentMovement: React.FC<StudentMovementProps> = ({ highlightedClassId, s
             {selectedStudentIds.size > 0 && (
                 <AllocationBar
                     selectedCount={selectedStudentIds.size}
-                    classes={classesForRole}
+                    classes={classes}
                     onAllocate={handleAllocate}
                     onClearSelection={() => setSelectedStudentIds(new Set())}
                 />
