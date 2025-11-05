@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { SchoolClass, ClassPeriod, ClassCapacity, SchoolUnit } from '../types';
+import { SchoolClass, ClassPeriod, ClassCapacity, SchoolUnit, Educator } from '../types';
 
 interface ClassAdminModalProps {
   schoolClass: SchoolClass | null; // null for creating a new class
   onClose: () => void;
   onSave: (schoolClass: SchoolClass) => void;
+  educators: Educator[];
 }
 
 const initialFormState: Omit<SchoolClass, 'id' | 'students'> = {
@@ -21,25 +22,30 @@ interface UnitConfigProps {
     unit: 'matriz' | 'filial' | 'anexo';
     teachers: { matriz: number | null; filial: number | null; anexo: number | null; };
     capacity: { matriz: number; filial: number; anexo: number; };
-    onTeacherChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onTeacherChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     onCapacityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    educators: Educator[];
 }
 
-const UnitConfig: React.FC<UnitConfigProps> = ({ unit, teachers, capacity, onTeacherChange, onCapacityChange }) => (
+const UnitConfig: React.FC<UnitConfigProps> = ({ unit, teachers, capacity, onTeacherChange, onCapacityChange, educators }) => (
     <div className="bg-gray-100 dark:bg-gray-700/30 p-4 rounded-lg space-y-3">
         <h4 className="font-bold text-center text-gray-900 dark:text-white mb-2">{unit.charAt(0).toUpperCase() + unit.slice(1)}</h4>
         <div>
             <label htmlFor={`teacher-${unit}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Professor(a)</label>
-            {/* FIX: Changed input type to "number" and added placeholder for clarity, as it expects an Educator ID. */}
-            <input 
-                type="number" 
+            <select 
                 id={`teacher-${unit}`} 
                 name={unit} 
                 value={teachers[unit] ?? ''} 
                 onChange={onTeacherChange} 
-                className="w-full bg-white dark:bg-gray-700/80 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 transition" 
-                placeholder="ID do Educador"
-            />
+                className="w-full bg-white dark:bg-gray-700/80 p-2 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 transition"
+            >
+                <option value="">Nenhum/a</option>
+                {educators.map(educator => (
+                    <option key={educator.id} value={educator.id}>
+                        {educator.name}
+                    </option>
+                ))}
+            </select>
         </div>
         <div>
             <label htmlFor={`capacity-${unit}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vagas</label>
@@ -56,7 +62,7 @@ const UnitConfig: React.FC<UnitConfigProps> = ({ unit, teachers, capacity, onTea
 );
 
 
-const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose, onSave }) => {
+const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose, onSave, educators }) => {
   const [formData, setFormData] = useState<Omit<SchoolClass, 'id' | 'students'>>(initialFormState);
 
   useEffect(() => {
@@ -130,8 +136,7 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
     }));
   };
   
-  // FIX: Updated handler to parse the input value to a number to match the corrected type in types.ts.
-  const handleTeacherChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTeacherChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const { name, value } = e.target;
       const numValue = parseInt(value, 10);
       setFormData(prev => ({
@@ -190,6 +195,7 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
                          capacity={formData.capacity}
                          onTeacherChange={handleTeacherChange}
                          onCapacityChange={handleCapacityChange}
+                         educators={educators}
                      />
                      <UnitConfig 
                          unit="filial"
@@ -197,6 +203,7 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
                          capacity={formData.capacity}
                          onTeacherChange={handleTeacherChange}
                          onCapacityChange={handleCapacityChange}
+                         educators={educators}
                      />
                      <UnitConfig 
                          unit="anexo" 
@@ -204,6 +211,7 @@ const ClassAdminModal: React.FC<ClassAdminModalProps> = ({ schoolClass, onClose,
                          capacity={formData.capacity}
                          onTeacherChange={handleTeacherChange}
                          onCapacityChange={handleCapacityChange}
+                         educators={educators}
                      />
                  </div>
             </div>

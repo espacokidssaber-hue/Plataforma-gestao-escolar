@@ -74,7 +74,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ setActiveSubView, set
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [classToEdit, setClassToEdit] = useState<SchoolClass | null>(null);
 
-    const { classes, addSchoolClass, updateSchoolClass, enrolledStudents } = useEnrollment();
+    const { classes, addSchoolClass, updateSchoolClass, enrolledStudents, educators } = useEnrollment();
 
     const handleOpenModal = (schoolClass: SchoolClass | null = null) => {
         setClassToEdit(schoolClass);
@@ -172,7 +172,7 @@ const ClassManagement: React.FC<ClassManagementProps> = ({ setActiveSubView, set
                 </div>
             </div>
             {renderContent()}
-            {isModalOpen && <ClassAdminModal schoolClass={classToEdit} onClose={() => setIsModalOpen(false)} onSave={handleSaveClass} />}
+            {isModalOpen && <ClassAdminModal schoolClass={classToEdit} onClose={() => setIsModalOpen(false)} onSave={handleSaveClass} educators={educators} />}
         </div>
     );
 };
