@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { EnrolledStudent, StudentLifecycleStatus, SchoolClass, NewExtemporaneousData, SchoolUnit } from '../../types';
-import { useEnrollment } from '../../contexts/EnrollmentContext';
+import { EnrolledStudent, StudentLifecycleStatus, SchoolClass, NewExtemporaneousData, SchoolUnit } from '../types';
+import { useEnrollment } from '../contexts/EnrollmentContext';
 import ExtemporaneousEnrollmentModal from './ExtemporaneousEnrollmentModal';
 import { useAuth } from '../contexts/AuthContext';
 
