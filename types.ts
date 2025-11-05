@@ -6,6 +6,7 @@ export enum View {
     DASHBOARD = 'Dashboard',
     ENROLLMENTS = 'Matrículas',
     STUDENTS = 'Alunos',
+    STAFF = 'Funcionários',
     ACADEMIC = 'Acadêmico',
     FINANCIAL = 'Financeiro',
     COMMUNICATION = 'Comunicação',
@@ -538,6 +539,21 @@ export interface Educator {
     role: string;
     subjects: string[];
     status: EducatorStatus;
+    hireDate: string;
+}
+
+export enum StaffStatus {
+    ACTIVE = 'Ativo',
+    INACTIVE = 'Inativo',
+}
+
+export interface Staff {
+    id: number;
+    name: string;
+    avatar: string;
+    role: string; // Ex: Secretária, Porteiro, Limpeza
+    department: string; // Ex: Administrativo, Serviços Gerais
+    status: StaffStatus;
     hireDate: string;
 }
 

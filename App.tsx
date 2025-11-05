@@ -14,6 +14,7 @@ import { useAuth } from './contexts/AuthContext';
 const Dashboard = React.lazy(() => import('./components/Dashboard'));
 const Admissions = React.lazy(() => import('./components/Admissions'));
 const Students = React.lazy(() => import('./components/Students'));
+const Staff = React.lazy(() => import('./components/Staff'));
 const Academic = React.lazy(() => import('./components/Academic'));
 const Financial = React.lazy(() => import('./components/Financial'));
 const Communication = React.lazy(() => import('./components/Communication'));
@@ -57,6 +58,8 @@ const AppContent: React.FC = () => {
           return <Admissions />;
         case View.STUDENTS:
           return <Students />;
+        case View.STAFF:
+            return <Staff />;
         case View.ACADEMIC:
           return <Academic setActiveView={setActiveView} />;
         case View.FINANCIAL:

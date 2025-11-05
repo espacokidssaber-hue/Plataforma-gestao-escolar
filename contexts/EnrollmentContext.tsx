@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode, useMemo } from 'react';
 // FIX: Import SchoolUnit to resolve reference errors
-import { EnrolledStudent, Lead, SchoolClass, Applicant, ReEnrollingStudent, StudentLifecycleStatus, NewEnrollmentStatus, LeadStatus, SchoolInfo, Contact, ManualEnrollmentData, NewExtemporaneousData, ClassLogEntry, Educator, AllSchedules, Subject, DeclarationTemplate, SchoolUnit } from '../types';
+import { EnrolledStudent, Lead, SchoolClass, Applicant, ReEnrollingStudent, StudentLifecycleStatus, NewEnrollmentStatus, LeadStatus, SchoolInfo, Contact, ManualEnrollmentData, NewExtemporaneousData, ClassLogEntry, Educator, AllSchedules, Subject, DeclarationTemplate, SchoolUnit, Staff, StaffStatus } from '../types';
 import { MOCK_ENROLLED_STUDENTS } from '../data/enrolledStudentsData';
 // import { MOCK_LEADS } from '../data/leadsData'; // Removed - File not provided
 import { MOCK_CLASSES } from '../data/classesData';
@@ -14,6 +14,7 @@ import { MOCK_EDUCATORS } from '../data/educatorsData';
 import { MOCK_SCHEDULES_INITIAL_STATE } from '../data/schedulesData';
 import { MOCK_SUBJECTS } from '../data/subjectsData';
 import { DECLARATION_TEMPLATES_DATA } from '../data/declarationTemplatesData';
+import { MOCK_STAFF } from '../data/staffData';
 import { useAuth } from './AuthContext';
 
 // FIX: Moved helper functions before their usage to resolve "used before declaration" error.
@@ -50,6 +51,7 @@ interface EnrollmentContextType {
     academicRecords: any[]; 
     classLogs: ClassLogEntry[];
     educators: Educator[];
+    staff: Staff[];
     schedules: AllSchedules;
     subjects: Subject[];
     contacts: Contact[];
@@ -80,6 +82,9 @@ interface EnrollmentContextType {
 
     addEducator: (educator: Omit<Educator, 'id'>) => void;
     updateEducator: (educator: Educator) => void;
+
+    addStaff: (staffMember: Omit<Staff, 'id'>) => void;
+    updateStaff: (staffMember: Staff) => void;
     
     updateSchedules: (newSchedules: AllSchedules) => void;
     addSubject: (subjectName: string) => Subject;
@@ -127,6 +132,7 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
     const [academicRecords, setAcademicRecords] = useState(Object.values(MOCK_STUDENTS_ACADEMIC).flat());
     const [classLogs, setClassLogs] = useState<ClassLogEntry[]>([]);
     const [educators, setEducators] = useState<Educator[]>([]);
+    const [staff, setStaff] = useState<Staff[]>([]);
     const [schedules, setSchedules] = useState<AllSchedules>({});
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -169,6 +175,7 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
             academicRecords: Object.values(MOCK_STUDENTS_ACADEMIC).flat(),
             classLogs: MOCK_CLASS_LOGS,
             educators: MOCK_EDUCATORS,
+            staff: MOCK_STAFF,
             schedules: MOCK_SCHEDULES_INITIAL_STATE,
             subjects: MOCK_SUBJECTS,
             contacts: [],
@@ -183,6 +190,7 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         setAcademicRecords(data.academicRecords);
         setClassLogs(data.classLogs);
         setEducators(data.educators);
+        setStaff(data.staff);
         setSchedules(data.schedules);
         setSubjects(data.subjects);
         setContacts(data.contacts);
@@ -230,7 +238,7 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         reEnrollingStudents: filteredReEnrollingStudents, 
         highlightedApplicantId, setHighlightedApplicantId, schoolInfo, crmOptions, 
         academicRecords: filteredAcademicRecords, 
-        classLogs, educators, schedules, subjects, contacts, uploadedActivities, signedContracts, declarationTemplates, updateDeclarationTemplates,
+        classLogs, educators, staff, schedules, subjects, contacts, uploadedActivities, signedContracts, declarationTemplates, updateDeclarationTemplates,
         enrollStudentsFromImport: (newStudents) => setEnrolledStudents(prev => [...prev, ...newStudents]),
         updateEnrolledStudent: (updated) => setEnrolledStudents(prev => prev.map(s => s.id === updated.id ? updated : s)),
         addLead: (newLead) => setLeads(prev => [...prev, newLead]),
@@ -271,6 +279,8 @@ export const EnrollmentProvider: React.FC<{ children: ReactNode }> = ({ children
         deleteClassLog: (logId) => setClassLogs(prev => prev.filter(l => l.id !== logId)),
         addEducator: (educator) => setEducators(prev => [{...educator, id: Date.now()}, ...prev]),
         updateEducator: (educator) => setEducators(prev => prev.map(e => e.id === educator.id ? educator : e)),
+        addStaff: (staffMember) => setStaff(prev => [{ ...staffMember, id: Date.now() }, ...prev]),
+        updateStaff: (staffMember) => setStaff(prev => prev.map(s => s.id === staffMember.id ? staffMember : s)),
         updateSchedules: (newSchedules) => setSchedules(newSchedules),
         addSubject: (subjectName) => {
             const newSubject: Subject = { id: Date.now(), name: subjectName, color: '#808080', calculationMethod: 'arithmetic', assessments: [] };
